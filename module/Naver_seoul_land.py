@@ -241,7 +241,7 @@ class Naver_seoul_land(FileManager) :
 
         response = requests.get(url, headers=headers, params=params)
         result = response.json()
-        print("fetch_apt_items", result)
+        
 
         return result
     
@@ -268,10 +268,7 @@ class Naver_seoul_land(FileManager) :
         
         results = []
         is_more_data = True
-        howmany = 0
         while is_more_data :
-            howmany += 1
-            print(howmany)
             try:
                 raw_data:json = self.fetch_apt_items(
                     complexNo = complexNo,
@@ -348,7 +345,6 @@ class Naver_seoul_land(FileManager) :
             result[col] = str_result
 
         self.info = result # 인스턴스로 저장
-        print("fetch_apt_items", result)
         return result # 판다스 데이터프레임
     
     def merge_info_articles(self, info_data , article_data ) :

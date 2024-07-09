@@ -49,6 +49,10 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(u"centralwidget")
 
         self.progressBar = ProgressBarWidget(self.centralwidget)  # 수정된 부분
+        self.progresslabel = QLabel(self.centralwidget)
+        self.progresslabel.setGeometry(280, 950, 281, 32)
+        self.progresslabel.setStyleSheet(u"font-size:20px;")
+
 
 
         self.pushButton_start = QPushButton(self.centralwidget)
@@ -628,19 +632,22 @@ class Ui_MainWindow(object):
     
 
     def get_infos(self) : 
-        self.tradeType = self.collect_tradeType()
-        self.realEstateType = self.collect_realEstateType()
-        self.minPrice = int(self.spinBox_minPrice.value())
-        self.maxPrice = int(self.spinBox_maxPrice.value())
-        self.areaMin, self.areaMax = self.collect_area()
-        self.recentlyBuildYears, self.oldBuildYears = self.collect_approval_date()
-        self.minHouseHoldCount, self.maxHouseHoldCount = self.collect_total_households()
-        self.names, self.ids = self.get_selected_items_data(self.listWidget_selected, searching_type='all')
-        
-        self.label_dealRange.setText(f'조회가격범위 : {self.minPrice/10000} ~ {self.maxPrice/10000}(억원)')
-        self.label_areaRange.setText(f'조회평수범위 : {self.areaMin} ~ {self.areaMax}(평)')
-        self.label_approvalDateRange.setText(f'조회사용승인범위 : {self.recentlyBuildYears} ~ {self.oldBuildYears}(년 전)')
-        self.label_totalHouseholdsRange.setText(f'조회세대수 : {self.minHouseHoldCount} ~ {self.maxHouseHoldCount}(세대)')
+        try :
+            self.tradeType = self.collect_tradeType()
+            self.realEstateType = self.collect_realEstateType()
+            self.minPrice = int(self.spinBox_minPrice.value())
+            self.maxPrice = int(self.spinBox_maxPrice.value())
+            self.areaMin, self.areaMax = self.collect_area()
+            self.recentlyBuildYears, self.oldBuildYears = self.collect_approval_date()
+            self.minHouseHoldCount, self.maxHouseHoldCount = self.collect_total_households()
+            self.names, self.ids = self.get_selected_items_data(self.listWidget_selected, searching_type='all')
+            
+            self.label_dealRange.setText(f'조회가격범위 : {self.minPrice/10000} ~ {self.maxPrice/10000}(억원)')
+            self.label_areaRange.setText(f'조회평수범위 : {self.areaMin} ~ {self.areaMax}(평)')
+            self.label_approvalDateRange.setText(f'조회사용승인범위 : {self.recentlyBuildYears} ~ {self.oldBuildYears}(년 전)')
+            self.label_totalHouseholdsRange.setText(f'조회세대수 : {self.minHouseHoldCount} ~ {self.maxHouseHoldCount}(세대)')
+        except : 
+            pass
 
     def display_district(self):
         selected_items = self.listWidget_1.selectedItems()
@@ -779,40 +786,41 @@ class Ui_MainWindow(object):
         dialog.exec()
 
     def start_fetching(self, dialog):
-        # dialog.accept()  # 다이얼로그 닫기
+        dialog.accept()  # 다이얼로그 닫기
         self.req()
 
     def req(self):
         import requests
 
         self.res.setText('시작합니다.')
-        import time
-        time.sleep(1)
-        self.result = self.naver.fetch(
-                complexNos=[int(id) for id in self.ids],
-                realEstateType = self.realEstateType,
-                tradeType=self.tradeType,
-                areaNos='',
-                page=1,
-                rentPriceMin=self.minPrice,
-                rentPriceMax=self.maxPrice,
-                priceMin=self.minPrice,
-                priceMax=self.maxPrice,
-                areaMin=self.areaMin,
-                areaMax=self.areaMax,
-                oldBuildYears=self.oldBuildYears,
-                recentlyBuildYears=self.recentlyBuildYears,
-                minHouseHoldCount=self.minHouseHoldCount,
-                maxHouseHoldCount=self.maxHouseHoldCount,
-                # progressChanged=self.progressChanged,
-            )
-        # worker = self.Worker(self)
-        # worker.progressChanged.connect(self.update_progress)
-        
-        # worker.start()
+        # self.result = self.naver.fetch(
+        #         complexNos=[int(id) for id in self.ids],
+        #         realEstateType = self.realEstateType,
+        #         tradeType=self.tradeType,
+        #         areaNos='',
+        #         page=1,
+        #         rentPriceMin=self.minPrice,
+        #         rentPriceMax=self.maxPrice,
+        #         priceMin=self.minPrice,
+        #         priceMax=self.maxPrice,
+        #         areaMin=self.areaMin,
+        #         areaMax=self.areaMax,
+        #         oldBuildYears=self.oldBuildYears,
+        #         recentlyBuildYears=self.recentlyBuildYears,
+        #         minHouseHoldCount=self.minHouseHoldCount,
+        #         maxHouseHoldCount=self.maxHouseHoldCount,
+        #         # progressChanged=self.progressChanged,
+        #     )
+
+        worker = self.Worker(self)
+        worker.progressChanged.connect(self.update_progress)
+        worker.progressNameChanged.connect(self.update_progressName)
+        worker.start()
     
     def update_progress(self, value):
         self.progressBar.setValue(value)
+    def update_progressName(self, value):
+        self.progresslabel.setText(value)
     
     def download(self, saving_format = "csv") :
         # 현재 시간을 YYYYMMDDhhmm 형식으로 추출
@@ -829,28 +837,49 @@ class Ui_MainWindow(object):
         os.startfile(self.folder_path)  # For Windows
 
 
-    # class Worker(QThread) :
-    #     progressChanged = Signal(int)
-    #     def __init__(self, parent) :
-    #         super().__init__(parent)
-    #         self.parent = parent
+    class Worker(QThread) :
+        progressChanged = Signal(int)
+        progressNameChanged = Signal(str)
+        def __init__(self, parent) :
+            super().__init__(parent)
+            self.parent = parent
         
-    #     def run(self):
-    #         self.parent.result = self.parent.naver.fetch(
-    #             complexNos=[int(id) for id in self.parent.ids],
-    #             realEstateType = self.parent.realEstateType,
-    #             tradeType=self.parent.tradeType,
-    #             areaNos='',
-    #             page=1,
-    #             rentPriceMin=self.parent.minPrice,
-    #             rentPriceMax=self.parent.maxPrice,
-    #             priceMin=self.parent.minPrice,
-    #             priceMax=self.parent.maxPrice,
-    #             areaMin=self.parent.areaMin,
-    #             areaMax=self.parent.areaMax,
-    #             oldBuildYears=self.parent.oldBuildYears,
-    #             recentlyBuildYears=self.parent.recentlyBuildYears,
-    #             minHouseHoldCount=self.parent.minHouseHoldCount,
-    #             maxHouseHoldCount=self.parent.maxHouseHoldCount,
-    #             progressChanged=self.progressChanged,
-    #         )
+        def run(self):
+            self.parent.result = self.parent.naver.fetch(
+                complexNos=[int(id) for id in self.parent.ids],
+                realEstateType = self.parent.realEstateType,
+                tradeType=self.parent.tradeType,
+                areaNos='',
+                page=1,
+                rentPriceMin=self.parent.minPrice,
+                rentPriceMax=self.parent.maxPrice,
+                priceMin=self.parent.minPrice,
+                priceMax=self.parent.maxPrice,
+                areaMin=self.parent.areaMin,
+                areaMax=self.parent.areaMax,
+                oldBuildYears=self.parent.oldBuildYears,
+                recentlyBuildYears=self.parent.recentlyBuildYears,
+                minHouseHoldCount=self.parent.minHouseHoldCount,
+                maxHouseHoldCount=self.parent.maxHouseHoldCount,
+                progressChanged=self.progressChanged,
+                progressNameChanged=self.progressNameChanged
+            )
+
+import sys
+from PySide6.QtWidgets import QApplication, QMainWindow
+from app import Ui_MainWindow  # 변환된 UI 파일 import
+
+class MainWindow(QMainWindow, Ui_MainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+        self.setupUi(self)
+
+def main():
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
+
