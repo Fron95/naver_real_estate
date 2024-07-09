@@ -11,12 +11,12 @@ from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect, QThread, Signal,
     QSize, QTime, QUrl, Qt)
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
-    QCursor, QFont, QFontDatabase, QGradient,
+    QCursor, QFont, QFontDatabase, QGradient, 
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient, QMovie,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QGroupBox, QLabel,
-    QListWidget, QListWidgetItem, QMainWindow, QMenu,
+    QListWidget, QListWidgetItem, QMainWindow, QMenu, QToolButton, QDoubleSpinBox,
     QMenuBar, QProgressBar, QPushButton, QSizePolicy,QDialog,QVBoxLayout,
     QSpinBox, QSplitter, QStatusBar, QWidget, QAbstractItemView)
 import pandas as pd
@@ -30,13 +30,33 @@ from widget.ProgressBarWidget import ProgressBarWidget  # 추가된 부분
 from widget.CheckBoxWidget import CheckBoxWidget
 
 
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.edge.service import Service as EdgeService
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.common.exceptions import WebDriverException
+import time
+
+
+
+
+
+
 class Ui_MainWindow(object):
     def __init__(self) :
+        
         self.naver = Naver_fetch_articles()
         self.filemanager = FileManager()        
         self.data = self.naver.total_apts_naver_got.copy()
         self.result = pd.DataFrame()
         self.folder_path = self.filemanager.result_folder
+        self.cookies = None
+        tik = time.time()
+        self.load_header_cookies()
+        tok = time.time()
+        print(tok - tik,"초가소요되었습니다. 쿠키가져오는데")
+        print(self.cookies)
 
 
 
@@ -60,7 +80,12 @@ class Ui_MainWindow(object):
         self.progresslabel.setGeometry(380, 950, 281, 32)
         self.progresslabel.setStyleSheet(u"font-size:20px;")
 
-
+        # ToolButton 추가
+        self.toolButton = QToolButton(self.centralwidget)
+        self.toolButton.setObjectName(u"toolButton")
+        self.toolButton.setGeometry(QRect(750, 950, 41, 41))
+        self.toolButton.clicked.connect(self.show_dialog)
+        self.toolButton.setText('...')
 
         self.pushButton_start = QPushButton(self.centralwidget)
         self.pushButton_start.setObjectName(u"pushButton_start")
@@ -70,6 +95,7 @@ class Ui_MainWindow(object):
 "font-size:20px;\n"
 "")
         self.pushButton_start.clicked.connect(self.fetching)    
+
 
         self.pushButton_to_excel = QPushButton(self.centralwidget)
         self.pushButton_to_excel.setObjectName(u"pushButton_to_excel")
@@ -517,6 +543,7 @@ class Ui_MainWindow(object):
         self.label.setText(QCoreApplication.translate("MainWindow", u"\uc9c0\uc5ed\uc120\ud0dd", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\ubb3c\uac74\uc120\ud0dd", None))
         self.menu.setTitle(QCoreApplication.translate("MainWindow", u"\ub124\uc774\ubc84\ubd80\ub3d9\uc0b0", None))
+        
     # retranslateUi
 
     def collect_realEstateType(self):
@@ -882,6 +909,75 @@ class Ui_MainWindow(object):
                 progressChanged=self.progressChanged,
                 progressNameChanged=self.progressNameChanged
             )
+
+    def show_dialog(self):
+        dialog = QDialog()
+        dialog.setWindowTitle("Set Delay")
+
+        layout = QVBoxLayout()
+
+        label = QLabel("최대지연 (초) : 2초 권장 ")
+        layout.addWidget(label)
+
+        double_spin_box = QDoubleSpinBox()
+        double_spin_box.setRange(0.0, 100.0)
+        double_spin_box.setDecimals(1)
+        double_spin_box.setValue(2.0)
+        double_spin_box.setSingleStep(0.1)
+
+        layout.addWidget(double_spin_box)
+
+        button = QPushButton("OK")
+        button.clicked.connect(lambda: self.set_delay(dialog, double_spin_box.value()))
+        layout.addWidget(button)
+
+        dialog.setLayout(layout)
+        dialog.exec()
+
+    def set_delay(self, dialog, value):
+        self.delay = value
+        dialog.accept()
+    
+    def load_header_cookies(self):
+    # Chrome 옵션 설정
+        chrome_options = ChromeOptions()
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--headless")  # Headless 옵션 추가
+        chrome_options.add_argument("--disable-gpu")  # Headless 옵션에서 가속 비활성화
+
+        # Edge 옵션 설정
+        edge_options = EdgeOptions()
+        edge_options.add_argument("--no-sandbox")
+        edge_options.add_argument("--disable-dev-shm-usage")
+        edge_options.add_argument("--headless")  # Headless 옵션 추가
+        edge_options.add_argument("--disable-gpu")  # Headless 옵션에서 가속 비활성화
+
+        # 드라이버 초기화
+        try:
+            self.driver = webdriver.Chrome(service=ChromeService(), options=chrome_options)
+            print("Chrome browser initialized.")
+        except WebDriverException:
+            self.driver = webdriver.Edge(service=EdgeService(), options=edge_options)
+            print("Edge browser initialized.")
+
+        # 네이버 부동산 페이지 접속
+        self.driver.get('https://new.land.naver.com/complexes/140240?ms=35.983693,129.550805,17&a=APT:ABYG:JGC:PRE&b=A1:B1:B2&e=RETAIL&f=3000&h=231&j=2&l=700&ad=true')
+
+        # 페이지 로딩 대기 (필요에 따라 조절)
+        time.sleep(5)
+
+        # 쿠키 수집
+        self.cookies = self.driver.get_cookies()
+
+        # 셀레니움 종료
+        self.driver.quit()
+
+
+
+
+
+
 
 import sys
 from PySide6.QtWidgets import QApplication, QMainWindow

@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 from module.Naver_seoul_land import Naver_seoul_land
+import time
+import numpy as np
 
 class Naver_fetch_articles(Naver_seoul_land) :
     def __init__(self) :
@@ -23,6 +25,7 @@ class Naver_fetch_articles(Naver_seoul_land) :
               recentlyBuildYears= "",
               minHouseHoldCount= "",
               maxHouseHoldCount= "",
+              delay = 2.0,
               progressChanged=None,
               progressNameChanged=None,
               resultReady=None) : 
@@ -38,6 +41,7 @@ class Naver_fetch_articles(Naver_seoul_land) :
         if progressChanged : progressChanged.emit(progress)
 
         for complexNo in complexNos : 
+            time.sleep(np.random.randint(delay))
             # 상태표시창
             if progressNameChanged : 
                 progressName = self.total_apts_naver_got[self.total_apts_naver_got['complexNo'] == complexNo]['complexName'].values[0]
