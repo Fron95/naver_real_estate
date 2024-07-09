@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 ################################################################################
@@ -14,7 +13,7 @@ from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QCursor, QFont, QFontDatabase, QGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
-    QPainter, QPalette, QPixmap, QRadialGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient, QMovie,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QGroupBox, QLabel,
     QListWidget, QListWidgetItem, QMainWindow, QMenu,
@@ -48,9 +47,17 @@ class Ui_MainWindow(object):
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
 
+        # GIF QLabel 추가
+        self.loading_label = QLabel("zz",self.centralwidget)
+        self.loading_label.setGeometry(280, 942, 50, 50)
+        self.loading_label.setVisible(True)  # 초기에는 숨겨둠
+        self.loading_label.setScaledContents(True)
+        self.loading_movie = QMovie("loading.gif")
+        self.loading_label.setMovie(self.loading_movie)
+
         self.progressBar = ProgressBarWidget(self.centralwidget)  # 수정된 부분
         self.progresslabel = QLabel(self.centralwidget)
-        self.progresslabel.setGeometry(280, 950, 281, 32)
+        self.progresslabel.setGeometry(380, 950, 281, 32)
         self.progresslabel.setStyleSheet(u"font-size:20px;")
 
 
@@ -787,6 +794,8 @@ class Ui_MainWindow(object):
 
     def start_fetching(self, dialog):
         dialog.accept()  # 다이얼로그 닫기
+        self.loading_label.setVisible(True)  # GIF 활성화
+        self.loading_movie.start()  # GIF 재생 시작
         self.req()
 
     def req(self):
@@ -819,6 +828,9 @@ class Ui_MainWindow(object):
     
     def update_progress(self, value):
         self.progressBar.setValue(value)
+        if value == 100:
+            self.loading_label.setVisible(False)  # 완료 시 GIF 숨김
+            self.loading_movie.stop()  # GIF 재생 중지
     def update_progressName(self, value):
         self.progresslabel.setText(value)
     
@@ -829,6 +841,12 @@ class Ui_MainWindow(object):
             self.result.to_csv(os.path.join(self.folder_path, f'결과_{current_time}.csv'), encoding='cp949', index=False)
         if format == 'excel' :
             self.result.to_excel(os.path.join(self.folder_path, f'결과_{current_time}.xlsx'), encoding='cp949', index=False)
+    
+
+
+
+
+        
         
 
     def open_folder(self):

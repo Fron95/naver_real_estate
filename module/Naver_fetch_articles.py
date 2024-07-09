@@ -34,7 +34,7 @@ class Naver_fetch_articles(Naver_seoul_land) :
         # 반복문 시작
         total = len(complexNos)
         trial = 0
-        progress = int(trial/total*100)
+        progress = trial/total*100
         if progressChanged : progressChanged.emit(progress)
 
         for complexNo in complexNos : 
@@ -75,9 +75,11 @@ class Naver_fetch_articles(Naver_seoul_land) :
             # 상태표시창
             if progressChanged :
                 trial += 1
-                progress = int(trial/total*100)
+                progress = trial/total*100
                 progressChanged.emit(progress)
+        
         progressChanged.emit(100)
         progressNameChanged.emit('완료')
+
         return ult_results
             

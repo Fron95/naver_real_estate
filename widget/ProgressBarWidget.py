@@ -6,5 +6,5 @@ class ProgressBarWidget(QProgressBar):
         super().__init__(parent)
         self.setObjectName("progressBar")
         self.setGeometry(40, 950, 231, 41)
-        self.setMaximum(104)
+        self.setMaximum(100)
         self.setValue(0)
