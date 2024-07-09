@@ -7,115 +7,109 @@ import ast
 import os
 import re
 
-class Naver_seoul_land() :
-    def __doc__(self) : 
-        print("""
-네이버부동산 크롤링 클래스입니다.
-사용방법은 다음과 같습니다.
+from module.FileManager import FileManager
 
-1. 
-              """)
-        
+class Naver_seoul_land(FileManager) :
     def __init__(self) :
-        self.base_dir = 'DB'
-        if not os.path.exists(self.base_dir):
-            os.mkdir(self.base_dir)
+        # 경로들 가져오기
+        super().__init__()    
+        self.info = pd.DataFrame()
+        self.articles = pd.DataFrame()
+        self.real_trades =  pd.DataFrame()
 
-        self.total_apts_dir = os.path.join(self.base_dir, '전국.csv')        
-        self.total_apts = pd.read_csv(self.total_apts_dir, encoding='cp949')
-        self.apts = self.total_apts.copy()
+    def get_provinces(cortarNo = "0000000000") :
+        import requests
 
-        self.cols_article = ['articleNo', 'articleName', 'realEstateTypeName', 'tradeTypeName', 'floorInfo', 'isPriceModification', 'dealOrWarrantPrc', 'areaName', 'area1', 'area2', 'direction', 'articleConfirmYmd', 'articleFeatureDesc', 'tagList', 'buildingName', 'sameAddrCnt', 'sameAddrMaxPrc', 'sameAddrMinPrc', 'pyeongs']
-        self.cols_trade = ['tradeType', 'floor' ,'formattedPrice', 'formattedTradeYearMonth']
-        self.cols_info = ['complexTypeName', 'complexName', 'totalHouseHoldCount', 'totalDongCount', 'useApproveYmd', 'minArea', 'maxArea']
-        self.cols_pyeongs = ['pyeongs']
+        cookies = {
+            'NNB': 'X4AQ72WKVDWWK',
+            '_ga_EFBDNNF91G': 'GS1.1.1710342642.1.0.1710342642.0.0.0',
+            '_ga': 'GA1.2.1432322870.1710342643',
+            'ASID': 'de6c8eec0000018e4a6f6df000000057',
+            'ba.uuid': '5bc9ada0-1bf0-4056-990b-4664443def51',
+            '_ga_6Z6DP60WFK': 'GS1.2.1715222690.1.1.1715222788.22.0.0',
+            '_fwb': '466u0Eh7yaUAZ21KUVztYh.1715756440721',
+            '_fwb': '177FzAmJvq2ZIC2aaw2bGEA.1716702331931',
+            'landHomeFlashUseYn': 'Y',
+            'NAC': 'eWSqDYgPae4PA',
+            'nhn.realestate.article.rlet_type_cd': 'A01',
+            'nhn.realestate.article.trade_type_cd': '""',
+            'NACT': '1',
+            'page_uid': 'ioW/RdqVOsCssAdy5MKssssssko-448268',
+            '_naver_usersession_': 'Mm0sn45xW/KWUfblGsoyNQ==',
+            'REALESTATE': 'Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST)',
+            'wcs_bt': '4f99b5681ce60:1720418179',
+            'BUC': 'ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
+        }
 
-    def config_district(self, name_district) :
-        """지역설정"""
-        self.district_dir = os.path.join(self.base_dir, name_district)
-        if not os.path.exists(self.district_dir):
-            os.mkdir(self.district_dir)
-        self.apts_dir = os.path.join(self.district_dir, f'{name_district}.csv')
-        self.article_dir = os.path.join(self.district_dir, f'{name_district}_매물.csv')
-        self.trade_dir = os.path.join(self.district_dir, f'{name_district}_실거래.csv')
-        self.info_dir = os.path.join(self.district_dir, f'{name_district}_정보.csv')
+        headers = {
+            'accept': '*/*',
+            'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3MjA0MTgxNzksImV4cCI6MTcyMDQyODk3OX0.8tTZNWoblgDsDC_4rL8VCwmQOKqF7LBUr1gKDFp7tPo',
+            # 'cookie': 'NNB=X4AQ72WKVDWWK; _ga_EFBDNNF91G=GS1.1.1710342642.1.0.1710342642.0.0.0; _ga=GA1.2.1432322870.1710342643; ASID=de6c8eec0000018e4a6f6df000000057; ba.uuid=5bc9ada0-1bf0-4056-990b-4664443def51; _ga_6Z6DP60WFK=GS1.2.1715222690.1.1.1715222788.22.0.0; _fwb=466u0Eh7yaUAZ21KUVztYh.1715756440721; _fwb=177FzAmJvq2ZIC2aaw2bGEA.1716702331931; landHomeFlashUseYn=Y; NAC=eWSqDYgPae4PA; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=""; NACT=1; page_uid=ioW/RdqVOsCssAdy5MKssssssko-448268; _naver_usersession_=Mm0sn45xW/KWUfblGsoyNQ==; REALESTATE=Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1720418179; BUC=ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
+            'priority': 'u=1, i',
+            'referer': 'https://new.land.naver.com/search?ms=37.5444094,127.0092879,16&a=APT:ABYG:JGC:OPST:OBYG:PRE:JGB&b=A1:B1:B2&e=RETAIL&f=3000&h=165&i=231&j=30&l=700&ad=true',
+            'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        }
 
-        self.apts = self.total_apts[self.total_apts['cortarName_district'] == name_district]
-        self.apts.reset_index(drop=True, inplace=True)
-        self.apts.to_csv(os.path.join('부동산', name_district, f'{name_district}.csv'), encoding='cp949', index=False)
+        params = {
+            'cortarNo': cortarNo,
+        }
 
-        self.renew()
+        response = requests.get('https://new.land.naver.com/api/regions/list', params=params, cookies=cookies, headers=headers)
+        return response.json()
 
-    def renew(self) :
-        try :
-            self.apts_info = self.load('info')
-        except :
-            pass
-        try :
-            self.apts_article = self.load('article')
-        except :
-            pass
-        try :
-            self.apts_trade = self.load('trade')
-        except :
-            pass
+    def get_districts(cortarNo = "1100000000") :
+        import requests
 
+        cookies = {
+            'NNB': 'X4AQ72WKVDWWK',
+            '_ga_EFBDNNF91G': 'GS1.1.1710342642.1.0.1710342642.0.0.0',
+            '_ga': 'GA1.2.1432322870.1710342643',
+            'ASID': 'de6c8eec0000018e4a6f6df000000057',
+            'ba.uuid': '5bc9ada0-1bf0-4056-990b-4664443def51',
+            '_ga_6Z6DP60WFK': 'GS1.2.1715222690.1.1.1715222788.22.0.0',
+            '_fwb': '466u0Eh7yaUAZ21KUVztYh.1715756440721',
+            '_fwb': '177FzAmJvq2ZIC2aaw2bGEA.1716702331931',
+            'landHomeFlashUseYn': 'Y',
+            'NAC': 'eWSqDYgPae4PA',
+            'nhn.realestate.article.rlet_type_cd': 'A01',
+            'nhn.realestate.article.trade_type_cd': '""',
+            'NACT': '1',
+            'page_uid': 'ioW/RdqVOsCssAdy5MKssssssko-448268',
+            '_naver_usersession_': 'Mm0sn45xW/KWUfblGsoyNQ==',
+            'REALESTATE': 'Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST)',
+            'wcs_bt': '4f99b5681ce60:1720418179',
+            'BUC': 'ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
+        }
 
-    def save(self, data, kind) :
-        if isinstance(data, dict) and all(isinstance(v, (int, float, str)) for v in data.values()):
-            df = pd.DataFrame([data])
+        headers = {
+            'accept': '*/*',
+            'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3MjA0MTgxNzksImV4cCI6MTcyMDQyODk3OX0.8tTZNWoblgDsDC_4rL8VCwmQOKqF7LBUr1gKDFp7tPo',
+            # 'cookie': 'NNB=X4AQ72WKVDWWK; _ga_EFBDNNF91G=GS1.1.1710342642.1.0.1710342642.0.0.0; _ga=GA1.2.1432322870.1710342643; ASID=de6c8eec0000018e4a6f6df000000057; ba.uuid=5bc9ada0-1bf0-4056-990b-4664443def51; _ga_6Z6DP60WFK=GS1.2.1715222690.1.1.1715222788.22.0.0; _fwb=466u0Eh7yaUAZ21KUVztYh.1715756440721; _fwb=177FzAmJvq2ZIC2aaw2bGEA.1716702331931; landHomeFlashUseYn=Y; NAC=eWSqDYgPae4PA; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=""; NACT=1; page_uid=ioW/RdqVOsCssAdy5MKssssssko-448268; _naver_usersession_=Mm0sn45xW/KWUfblGsoyNQ==; REALESTATE=Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1720418179; BUC=ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
+            'priority': 'u=1, i',
+            'referer': 'https://new.land.naver.com/search?ms=37.5444094,127.0092879,16&a=APT:ABYG:JGC:OPST:OBYG:PRE:JGB&b=A1:B1:B2&e=RETAIL&f=3000&h=165&i=231&j=30&l=700&ad=true',
+            'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        }
 
-        else:
-            df = pd.DataFrame(data)
+        params = {
+            'cortarNo': cortarNo,
+        }
 
-        def convert_price(x):
-            if isinstance(x, int):
-                return x * 10000 if x <= 100 else x
-            if not isinstance(x, str):
-                return x
-            try:
-                if '억' in x:
-                    parts = x.split('억')
-                    if len(parts) == 2 and parts[1].strip():
-                        return int(parts[0].strip()) * 10000 + int(re.sub(r'[^\d]', '', parts[1]))
-                    else:
-                        return int(parts[0].strip()) * 10000
-                else:
-                    return int(re.sub(r'[^\d]', '', x))
-            except ValueError:
-                return x
-        
-        if kind == 'article' :
-            df['floorInfo'] = df['floorInfo'].apply(lambda x : x+'층')
-            
-            df['dealOrWarrantPrc'] = df['dealOrWarrantPrc'].apply(convert_price)
-            df.to_csv(self.article_dir, encoding='cp949', index=False)
-        elif kind == 'trade' :
-            df['formattedPrice'] = df['formattedPrice'].apply(convert_price)
-            # for idx, row in df.iterrows():
-            #     area_no = row['areaNo']
-            #     pyeongs = land.str2dict(row['pyeongs'])
-            #     if str(area_no) in pyeongs:
-            #         df.at[idx, 'pyeong'] = pyeongs[str(area_no)]
-            df.to_csv(self.trade_dir, encoding='cp949', index=False)
-        elif kind == 'info' :
-            df.to_csv(self.info_dir, encoding='cp949', index=False)
-        else :
-            print("kind에 article, trade, info 중 하나를 넣으세요.")
-        return df
-    
-    def load(self, kind) :
-        
-        if kind == 'article' :
-            df = pd.read_csv(self.article_dir, encoding='cp949', )
-        elif kind == 'trade' :
-            df =pd.read_csv(self.trade_dir, encoding='cp949', )
-        elif kind == 'info' :
-            df =pd.read_csv(self.info_dir, encoding='cp949', )
-        else :
-            print("kind에 article, trade, info 중 하나를 넣으세요.")
-        return df
-        
+        response = requests.get('https://new.land.naver.com/api/regions/list', params=params, cookies=cookies, headers=headers)
+        return response.json()
     
     def get_dong(self, cortarNo ="1120000000") :
         """구 이하 동이름 가져오기"""
@@ -132,10 +126,8 @@ class Naver_seoul_land() :
 
         response = requests.get(url, headers=headers, params=params)
         data = response.json()
-        cortar_list = [( region['cortarNo'], region['cortarName'],) for region in data['regionList']]
-        return cortar_list
-    
-    # 아파트 목록가져오기
+        return data
+
     def get_apts(self, cortarNo = "1120011000") :
         """동 이하 아파트 이름 가져오기"""
 
@@ -153,34 +145,44 @@ class Naver_seoul_land() :
 
         response = requests.get(url, headers=headers, params=params)
         data = response.json()
-        cortar_list = [( region['complexNo'], region['complexName'],) for region in data['complexList']]
-        return cortar_list
+        return data
+    
+    def fetch_total_complex_naver_got(self) :
+        import time
+        import random
+        시도단위들 = self.get_provinces()['regionList']
 
-    def get_apts_mult(self, districts) : 
-        """구 이하 아파트 이름 가져오기"""
         results = []
 
-        for district in districts :
-            no_district, name_district = district[0], district[1]
-            
-            dongs = self.get_dong(no_district)
+        for 시도단위 in 시도단위들 :
+            시도단위id = 시도단위['cortarNo']
+            시도단위이름 = 시도단위['cortarName']
+            time.sleep(random.randint(1, 5))
+            자치구들 = self.get_districts(시도단위id)['regionList']
+            for 자치구 in 자치구들 : 
+                자치구id = 자치구['cortarNo']
+                자치구이름 = 자치구['cortarName']
+                time.sleep(random.randint(1, 5))
+                동읍면들 = self.get_dong(자치구id)['regionList']
+                for 동읍면 in 동읍면들 : 
+                    동읍면id = 동읍면['cortarNo']
+                    동읍면이름 = 동읍면['cortarName']
+                    time.sleep(random.randint(1, 5))
+                    건물들 = self.get_apts(동읍면id)['complexList']
+                    for 건물 in 건물들 : 
+                        건물id = 건물['complexNo']
+                        건물이름 = 건물['complexName']
+                        건물타입 = 건물['realEstateTypeCode']
+                        위도 = 건물['latitude']
+                        경도 = 건물['longitude']
+                        result = (시도단위id, 시도단위이름, 자치구id, 자치구이름, 동읍면id, 동읍면이름, 건물id, 건물타입, 건물이름, 위도, 경도)
+                        results.append(result)
+                        print(result)
 
-            for dong in dongs : 
-                no_dong, name_dong = dong[0], dong[1]
-
-                apts = self.get_apts(no_dong)
-
-                for apt in apts :
-                    no_apt, name_apt = apt[0], apt[1]
-                    results.append((no_district,name_district,no_dong,name_dong,no_apt,name_apt))
-        df = pd.DataFrame(results)
-        df.columns = ['cortarNo_district','cortarName_district','cortarName_dong','name_dong','complexNo','complexName']
-
-        return df
-    
     # 매물조회
-    def apt_items(self, 
+    def fetch_apt_items(self, 
                   complexNo = 1147, 
+                  realEstateType = "APT:PRE",
                   tradeType = "A1:B1", 
                   areaNos = '',
                   page = 1, 
@@ -194,7 +196,7 @@ class Naver_seoul_land() :
                   recentlyBuildYears= "",
                   minHouseHoldCount= "",
                   maxHouseHoldCount= "",
-                  ) :
+                  ) -> json :
         """단일 물건에 대한 매물정보 (호가정보) 가져오기.
         complexNo : 물건id
         tradeType : A1(매매) | B1(전세)
@@ -210,7 +212,7 @@ class Naver_seoul_land() :
         }
 
         params = {
-            "realEstateType": "APT:PRE",
+            "realEstateType": realEstateType,
             "tradeType": tradeType,
             "tag": "::::::::",
             "rentPriceMin": rentPriceMin,
@@ -239,13 +241,16 @@ class Naver_seoul_land() :
 
         response = requests.get(url, headers=headers, params=params)
         result = response.json()
+        print("fetch_apt_items", result)
 
         return result
     
-    def apt_items_mult(self, 
+    # 해당 물건에 관한 모든 매물을 가져옴.
+    def fetch_apt_items_mult(self, 
                   complexNo = 1147, 
+                  realEstateType = "APT:PRE",
                   tradeType = "A1:B1", 
-                  areaNos = '',
+                  areaNos = '', # 미입력시 전체
                   page = 1, 
                   rentPriceMin= 0,
                   rentPriceMax= 900000000,
@@ -258,14 +263,19 @@ class Naver_seoul_land() :
                   minHouseHoldCount= "",
                   maxHouseHoldCount= "",
                   sleep = 1,
-                merge = 'apts') :
+                #   merge = 'apt'
+                ) :
         
         results = []
         is_more_data = True
+        howmany = 0
         while is_more_data :
+            howmany += 1
+            print(howmany)
             try:
-                raw_data = self.apt_items(
+                raw_data:json = self.fetch_apt_items(
                     complexNo = complexNo,
+                    realEstateType = realEstateType,
                     tradeType = tradeType,
                     areaNos = areaNos,
                     page = page,
@@ -281,32 +291,31 @@ class Naver_seoul_land() :
                     maxHouseHoldCount = maxHouseHoldCount,
                 )
 
-                if merge == 'apts_info' :
-                    result = self.apts_info[self.apts['complexNo'] == complexNo].to_dict()  # 기존 row의 데이터 포함
-                elif merge == 'apts' : 
-                    result = self.apts[self.apts['complexNo'] == complexNo].to_dict()  # 기존 row의 데이터 포함
-                else :
-                    result = pd.DataFrame()
-
-                is_more_data = raw_data['isMoreData']
-                for article in raw_data['articleList'] :
+                result :dict = {}
+                is_more_data:bool = raw_data['isMoreData'] 
+                for article  in raw_data['articleList']  :
                     for col in self.cols_article :
-                        if col in article :
-                            result.loc[:,col] = article[col]
+                        result[col] = article.get(col,"")
                     
                     results.append(copy.deepcopy(result))
 
             except Exception as e:
-                print(f"Error fetching data for complexNo {complexNo} and areaNo {areaNos}: {e}")
+                print(f"(1)Error fetching data for complexNo {complexNo} and areaNo {areaNos}: {e}")
                 is_more_data = False
             
             page += 1 
             time.sleep(sleep)
-        return results
+
+            df = pd.DataFrame(results) # 판다스 데이터프레임
+
+            self.articles = df # 인스턴스로 저장
+        
+        return df # 판다스 데이터프레임
+    
 
 
     # 단지정보
-    def apt_info(self, complexNo = 1147, merge = True) :
+    def fetch_apt_info(self, complexNo=1147):
         """단지정보 조회"""
         url = f"https://new.land.naver.com/api/complexes/overview/{complexNo}"
         headers = {
@@ -317,35 +326,48 @@ class Naver_seoul_land() :
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
         }
 
-        params = {
-            "complexNo": complexNo
-        }
-
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers)
         raw_data = response.json()
-        if merge : 
-            result = self.apts[self.apts['complexNo'] == complexNo]
-        else :
-            result = pd.DataFrame()
+        result = self.total_apts_naver_got[self.total_apts_naver_got['complexNo'] == complexNo].copy()
 
-        for col in self.cols_info :         
-            try :
-                result.loc[:, col] = raw_data.get(col, '')
-            except Exception as e :
-                print(f"at complexNo : {complexNo}, error occured with column : {col}")
+        for col in self.cols_info:         
+            try:
+                result.at[result.index[0], col] = raw_data.get(col, '')
+            except Exception as e:
+                print(f"at complexNo: {complexNo}, error occurred with column: {col}")
                 continue
-        for col in self.cols_pyeongs : 
+
+        for col in self.cols_pyeongs:
             pyeong_info = {}
-            for pyeong in raw_data[col] :
-                pyeong_info[pyeong['pyeongNo']] =  pyeong['exclusiveArea']        
+            if col in raw_data:
+                for pyeong in raw_data[col]:
+                    pyeongNo = pyeong['pyeongNo']
+                    exclusiveArea = pyeong['exclusiveArea']        
+                    pyeong_info[pyeongNo] = exclusiveArea
             str_result = json.dumps(pyeong_info)
-            result.loc[:,col] = str_result
+            result[col] = str_result
 
-        return result
-
+        self.info = result # 인스턴스로 저장
+        print("fetch_apt_items", result)
+        return result # 판다스 데이터프레임
     
+    def merge_info_articles(self, info_data , article_data ) :
+        sample_df = pd.DataFrame()
+        if (type(info_data) != type(sample_df) ) or (type(article_data) != type(sample_df) ) :
+            print('판다스 데이터프레임 데이터타입을 입력해주세요.')
+            return
+        
+        for col in info_data.columns : 
+            article_data.loc[:,col] = info_data[col].values[0]
+        
+        return article_data
+        
+
+    # todo : 이 이하는 아직 정리하지 못했다.
+
+
     # 실거래가
-    def real_trade(self, complexNo=1147, areaNo=0, db = 'apts') :
+    def fetch_real_trade(self, complexNo=1147, areaNo=0, db = 'apts') :
         """아파트 특정 평수 실거래가 조회"""
 
         url = f"https://new.land.naver.com/api/complexes/{complexNo}/prices/real"
@@ -375,10 +397,11 @@ class Naver_seoul_land() :
 
         try:
             if db == 'apts_info' :
-                result = self.apts_info[self.apts['complexNo'] == complexNo].iloc[0, :].to_dict()  # 기존 row의 데이터 포함
+                result = self.apts_info[self.apts_info['complexNo'] == complexNo].iloc[0, :]  # 기존 row의 데이터 포함
             else : 
-                result = self.apts[self.apts['complexNo'] == complexNo].iloc[0, :].to_dict()  # 기존 row의 데이터 포함
+                result = self.total_apts_naver_got[self.total_apts_naver_got['complexNo'] == complexNo].iloc[0, :]  # 기존 row의 데이터 포함
             result['areaNo'] = areaNo
+            
 
             for month in raw_data :
                 for trade in month['realPriceList'] :
@@ -387,7 +410,7 @@ class Naver_seoul_land() :
                             result.loc[:,col] = trade[col]
                     results.append(result.copy())
         except Exception as e:
-            print(f"Error fetching data for complexNo {complexNo} and areaNo {areaNo}: {e}")
+            print(f"(2)Error fetching data for complexNo {complexNo} and areaNo {areaNo}: {e}")
 
         return result
     
@@ -402,15 +425,15 @@ class Naver_seoul_land() :
 
          
 
-    def real_trade_mult(self, complexNo, pyeongs,  db = 'apts') : 
+    def fetch_real_trade_mult(self, complexNo, pyeongs,  db = 'apts') : 
         """아파트 단위 실거래가 조사"""
         results = []
         for areaNo, pyeong in pyeongs.items():
             try:
-                result = self.real_trade(complexNo=complexNo, areaNo=areaNo, db=db)
+                result = self.fetch_real_trade(complexNo=complexNo, areaNo=areaNo, db=db)
                 for idx in range(len(result)) :
                     result[idx] = result[idx]['pyeong'] = pyeong
                 results.append(result.copy())
             except Exception as e:
-                print(f"Error fetching data for complexNo {complexNo} and areaNo {areaNo}: {e}")
+                print(f"(3)Error fetching data for complexNo {complexNo} and areaNo {areaNo}: {e}")
         return results

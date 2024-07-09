@@ -5,11 +5,11 @@ from module.Naver_seoul_land import Naver_seoul_land
 class Naver_fetch_articles(Naver_seoul_land) :
     def __init__(self) :
         super().__init__()
-        self.results = pd.DataFrame()
+        
     # todo : 셀레니움으로 header를 좀 가져와야한다.
     def fetch(self, 
               complexNos = [1147, 119219], 
-            #   complexNos = [1147], 
+              realEstateType = "APT:PRE",
               tradeType = "A1:B1", 
               areaNos = '',
               page = 1, 
@@ -26,24 +26,50 @@ class Naver_fetch_articles(Naver_seoul_land) :
               progressChanged=None,
               resultReady=None) : 
         
+        realEstateType = "APT:PRE"
+        # 수집할 컨테이너
+        ult_results = pd.DataFrame()
+
+        # 반복문 시작
         total = len(complexNos)
         trial = 0
         for complexNo in complexNos : 
+            # 상태표시창
             progress = int(trial/total)
-            progressChanged.emit(progress)
             trial += 1
-            # 위치 가져오기
-            # apt = self.total_apts[self.total_apts['complexNo'] == complexNo]
+            if progressChanged : progressChanged.emit(progress)
             
-            # info 가져오기
-            info = self.apt_info(
+            # (1) 아파트정보 info 가져오기
+            info = self.fetch_apt_info(
                 complexNo = complexNo
             )
+
+            print(
+                "complexNo" , complexNo,
+                "realEstateType" , realEstateType,
+                "tradeType" , tradeType,
+                "areaNos" , areaNos,
+                "page" , page,
+                "rentPriceMin" , rentPriceMin,
+                "rentPriceMax" , rentPriceMax,
+                "priceMin" , priceMin,
+                "priceMax" , priceMax,
+                "areaMin" , areaMin,
+                "areaMax" , areaMax,
+                "oldBuildYears" , oldBuildYears,
+                "recentlyBuildYears" , recentlyBuildYears,
+                "minHouseHoldCount" , minHouseHoldCount,
+                "maxHouseHoldCount" , maxHouseHoldCount,
+
+            )
+
+
             
             # todo : result를 제거해야함
-            # 매물 가져오기
-            articles = self.apt_items_mult(
+            # (2) 매물 articles 가져오기
+            articles = self.fetch_apt_items_mult(
                 complexNo = complexNo, 
+                realEstateType = realEstateType,
                 tradeType = tradeType,
                 areaNos = areaNos,
                 page = page, 
@@ -57,17 +83,19 @@ class Naver_fetch_articles(Naver_seoul_land) :
                 recentlyBuildYears = recentlyBuildYears,
                 minHouseHoldCount = minHouseHoldCount,
                 maxHouseHoldCount = maxHouseHoldCount,)
-            articles = pd.DataFrame(articles)
             
+            print(complexNo,"articles" ,len(articles))
+            print(complexNo,"info" ,len(info))
             
-
             # for col in apt.columns :
             #     articles[col] = apt[col].values[0]
             for col in info.columns :
                 articles[col] = info[col].values[0]
                 
 
-            self.results = pd.concat([self.results, articles])
+            ult_results = pd.concat([ult_results, articles])
 
-        return self.results
+            print(len(ult_results))
+
+        return ult_results
             

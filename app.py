@@ -25,7 +25,7 @@ import os
 from datetime import datetime
 from module.Naver_seoul_land import Naver_seoul_land
 from module.Naver_fetch_articles import Naver_fetch_articles
-
+from module.FileManager import FileManager
 # 위젯
 from widget.ProgressBarWidget import ProgressBarWidget  # 추가된 부분
 from widget.CheckBoxWidget import CheckBoxWidget
@@ -33,11 +33,11 @@ from widget.CheckBoxWidget import CheckBoxWidget
 
 class Ui_MainWindow(object):
     def __init__(self) :
-        path = os.path.join('DB', '전국.csv')
         self.naver = Naver_fetch_articles()
-        self.data = pd.read_csv(path, encoding='cp949',) 
+        self.filemanager = FileManager()        
+        self.data = self.naver.total_apts_naver_got.copy()
         self.result = pd.DataFrame()
-        self.folder_path = '부동산'
+        self.folder_path = self.filemanager.result_folder
 
 
 
@@ -224,6 +224,12 @@ class Ui_MainWindow(object):
         self.checkBox_area_70.setChecked(True)
         self.checkBox_area_70.setTristate(False)
         self.splitter_11.addWidget(self.checkBox_area_70)
+        self.checkBox_area_max = QCheckBox(self.splitter_11)
+        self.checkBox_area_max.setObjectName(u"checkBox_area_max")
+        self.checkBox_area_max.stateChanged.connect(self.get_infos)
+        self.checkBox_area_max.setChecked(True)
+        self.checkBox_area_max.setTristate(False)
+        self.splitter_11.addWidget(self.checkBox_area_max)
         self.splitter_10.addWidget(self.splitter_11)
         self.label_areaRange = QLabel(self.groupBox_6)
         self.label_areaRange.setObjectName(u"label_areaRange")
@@ -281,6 +287,11 @@ class Ui_MainWindow(object):
         self.checkBox_approvalDate_30.stateChanged.connect(self.get_infos)
         self.checkBox_approvalDate_30.setChecked(True)
         self.splitter_13.addWidget(self.checkBox_approvalDate_30)
+        self.checkBox_approvalDate_max = QCheckBox(self.splitter_13)
+        self.checkBox_approvalDate_max.setObjectName(u"checkBox_approvalDate_max")
+        self.checkBox_approvalDate_max.stateChanged.connect(self.get_infos)
+        self.checkBox_approvalDate_max.setChecked(True)
+        self.splitter_13.addWidget(self.checkBox_approvalDate_max)
         self.splitter_12.addWidget(self.splitter_13)
         self.label_approvalDateRange = QLabel(self.groupBox_7)
         self.label_approvalDateRange.setObjectName(u"label_approvalDateRange")
@@ -300,6 +311,11 @@ class Ui_MainWindow(object):
         self.splitter_14.setObjectName(u"splitter_14")
         self.splitter_14.setGeometry(QRect(20, 30, 571, 24))
         self.splitter_14.setOrientation(Qt.Horizontal)
+        self.checkBox_totalHouseholds_0 = QCheckBox(self.splitter_14)
+        self.checkBox_totalHouseholds_0.setObjectName(u"checkBox_totalHouseholds_0")
+        self.checkBox_totalHouseholds_0.stateChanged.connect(self.get_infos)
+        self.checkBox_totalHouseholds_0.setChecked(True)
+        self.splitter_14.addWidget(self.checkBox_totalHouseholds_0)
         self.checkBox_totalHouseholds_100 = QCheckBox(self.splitter_14)
         self.checkBox_totalHouseholds_100.setObjectName(u"checkBox_totalHouseholds_100")
         self.checkBox_totalHouseholds_100.stateChanged.connect(self.get_infos)
@@ -330,11 +346,16 @@ class Ui_MainWindow(object):
         self.checkBox_totalHouseholds_1500.stateChanged.connect(self.get_infos)
         self.checkBox_totalHouseholds_1500.setChecked(True)
         self.splitter_14.addWidget(self.checkBox_totalHouseholds_1500)
-        self.checkBox_totalHouseholds_2001 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_2001.setObjectName(u"checkBox_totalHouseholds_2001")
-        self.checkBox_totalHouseholds_2001.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_2001.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_2001)
+        self.checkBox_totalHouseholds_2000 = QCheckBox(self.splitter_14)
+        self.checkBox_totalHouseholds_2000.setObjectName(u"checkBox_totalHouseholds_2000")
+        self.checkBox_totalHouseholds_2000.stateChanged.connect(self.get_infos)
+        self.checkBox_totalHouseholds_2000.setChecked(True)
+        self.splitter_14.addWidget(self.checkBox_totalHouseholds_2000)
+        self.checkBox_totalHouseholds_max = QCheckBox(self.splitter_14)
+        self.checkBox_totalHouseholds_max.setObjectName(u"checkBox_totalHouseholds_max")
+        self.checkBox_totalHouseholds_max.stateChanged.connect(self.get_infos)
+        self.checkBox_totalHouseholds_max.setChecked(True)
+        self.splitter_14.addWidget(self.checkBox_totalHouseholds_max)
         self.splitter_17.addWidget(self.groupBox_8)
         self.splitter_18 = QSplitter(self.centralwidget)
         self.splitter_18.setObjectName(u"splitter_18")
@@ -456,7 +477,8 @@ class Ui_MainWindow(object):
         self.checkBox_area_40.setText(QCoreApplication.translate("MainWindow", u"40\ud3c9", None))
         self.checkBox_area_50.setText(QCoreApplication.translate("MainWindow", u"50\ud3c9", None))
         self.checkBox_area_60.setText(QCoreApplication.translate("MainWindow", u"60\ud3c9", None))
-        self.checkBox_area_70.setText(QCoreApplication.translate("MainWindow", u"70\ud3c9~", None))
+        self.checkBox_area_70.setText(QCoreApplication.translate("MainWindow", u"70\ud3c9", None))
+        self.checkBox_area_max.setText(QCoreApplication.translate("MainWindow", u"70\ud3c9~", None))
         self.label_areaRange.setText(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c : ( ) ~ ( ) ", None))
         self.groupBox_7.setTitle(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c", None))
         self.checkBox_approvalDate_0.setText(QCoreApplication.translate("MainWindow", u"\uc785\uc8fc\uc608\uc815", None))
@@ -466,17 +488,20 @@ class Ui_MainWindow(object):
         self.checkBox_approvalDate_15.setText(QCoreApplication.translate("MainWindow", u"15\ub144", None))
         self.checkBox_approvalDate_20.setText(QCoreApplication.translate("MainWindow", u"20\ub144", None))
         self.checkBox_approvalDate_25.setText(QCoreApplication.translate("MainWindow", u"25\ub144", None))
-        self.checkBox_approvalDate_30.setText(QCoreApplication.translate("MainWindow", u"30\ub144~", None))
+        self.checkBox_approvalDate_30.setText(QCoreApplication.translate("MainWindow", u"30\ub144", None))
+        self.checkBox_approvalDate_max.setText(QCoreApplication.translate("MainWindow", u"30\ub144~", None))
         self.label_approvalDateRange.setText(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c : ( ) ~ ( ) ", None))
         self.groupBox_8.setTitle(QCoreApplication.translate("MainWindow", u"\uc138\ub300\uc218", None))
         self.label_totalHouseholdsRange.setText(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c : ( ) ~ ( ) ", None))
+        self.checkBox_totalHouseholds_0.setText(QCoreApplication.translate("MainWindow", u"0", None))
         self.checkBox_totalHouseholds_100.setText(QCoreApplication.translate("MainWindow", u"~100", None))
         self.checkBox_totalHouseholds_300.setText(QCoreApplication.translate("MainWindow", u"300", None))
         self.checkBox_totalHouseholds_500.setText(QCoreApplication.translate("MainWindow", u"500", None))
         self.checkBox_totalHouseholds_700.setText(QCoreApplication.translate("MainWindow", u"700", None))
         self.checkBox_totalHouseholds_1000.setText(QCoreApplication.translate("MainWindow", u"1000", None))
         self.checkBox_totalHouseholds_1500.setText(QCoreApplication.translate("MainWindow", u"1500", None))
-        self.checkBox_totalHouseholds_2001.setText(QCoreApplication.translate("MainWindow", u"2000~", None))
+        self.checkBox_totalHouseholds_2000.setText(QCoreApplication.translate("MainWindow", u"2000", None))
+        self.checkBox_totalHouseholds_max.setText(QCoreApplication.translate("MainWindow", u"2000~", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"GroupBox", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\uc9c0\uc5ed\uc120\ud0dd", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\ubb3c\uac74\uc120\ud0dd", None))
@@ -524,7 +549,8 @@ class Ui_MainWindow(object):
             "40": self.checkBox_area_40,
             "50": self.checkBox_area_50,
             "60": self.checkBox_area_60,
-            "70": self.checkBox_area_70
+            "70": self.checkBox_area_70,
+            "900000000": self.checkBox_area_max
         }
 
         # 체크된 체크박스들을 리스트로 모으기
@@ -554,7 +580,8 @@ class Ui_MainWindow(object):
             "15": self.checkBox_approvalDate_15,
             "20": self.checkBox_approvalDate_20,
             "25": self.checkBox_approvalDate_25,
-            "30": self.checkBox_approvalDate_30
+            "30": self.checkBox_approvalDate_30,
+            "100": self.checkBox_approvalDate_max
         }
 
         checked_dates = [int(date) for date, checkbox in approval_date_checkboxes.items() if checkbox.isChecked()]
@@ -573,13 +600,15 @@ class Ui_MainWindow(object):
 
     def collect_total_households(self):
         total_households_checkboxes = {
+            "0": self.checkBox_totalHouseholds_0,
             "100": self.checkBox_totalHouseholds_100,
             "300": self.checkBox_totalHouseholds_300,
             "500": self.checkBox_totalHouseholds_500,
             "700": self.checkBox_totalHouseholds_700,
             "1000": self.checkBox_totalHouseholds_1000,
             "1500": self.checkBox_totalHouseholds_1500,
-            "2001": self.checkBox_totalHouseholds_2001
+            "2000": self.checkBox_totalHouseholds_2000,
+            "900000": self.checkBox_totalHouseholds_max
         }
 
         checked_households = [int(count) for count, checkbox in total_households_checkboxes.items() if checkbox.isChecked()]
@@ -600,6 +629,7 @@ class Ui_MainWindow(object):
 
     def get_infos(self) : 
         self.tradeType = self.collect_tradeType()
+        self.realEstateType = self.collect_realEstateType()
         self.minPrice = int(self.spinBox_minPrice.value())
         self.maxPrice = int(self.spinBox_maxPrice.value())
         self.areaMin, self.areaMax = self.collect_area()
@@ -749,17 +779,37 @@ class Ui_MainWindow(object):
         dialog.exec()
 
     def start_fetching(self, dialog):
-        dialog.accept()  # 다이얼로그 닫기
+        # dialog.accept()  # 다이얼로그 닫기
         self.req()
 
     def req(self):
         import requests
 
         self.res.setText('시작합니다.')
-        worker = self.Worker(self)
-        worker.progressChanged.connect(self.update_progress)
+        import time
+        time.sleep(1)
+        self.result = self.naver.fetch(
+                complexNos=[int(id) for id in self.ids],
+                realEstateType = self.realEstateType,
+                tradeType=self.tradeType,
+                areaNos='',
+                page=1,
+                rentPriceMin=self.minPrice,
+                rentPriceMax=self.maxPrice,
+                priceMin=self.minPrice,
+                priceMax=self.maxPrice,
+                areaMin=self.areaMin,
+                areaMax=self.areaMax,
+                oldBuildYears=self.oldBuildYears,
+                recentlyBuildYears=self.recentlyBuildYears,
+                minHouseHoldCount=self.minHouseHoldCount,
+                maxHouseHoldCount=self.maxHouseHoldCount,
+                # progressChanged=self.progressChanged,
+            )
+        # worker = self.Worker(self)
+        # worker.progressChanged.connect(self.update_progress)
         
-        worker.start()
+        # worker.start()
     
     def update_progress(self, value):
         self.progressBar.setValue(value)
@@ -767,11 +817,10 @@ class Ui_MainWindow(object):
     def download(self, saving_format = "csv") :
         # 현재 시간을 YYYYMMDDhhmm 형식으로 추출
         current_time = datetime.now().strftime('%Y%m%d%H%M')
-        self.result.to_csv(os.path.join(self.folder_path, f'비조건문{current_time}.csv'), encoding='cp949', index=False)
         if saving_format == 'csv' :
-            self.result.to_csv(os.path.join(self.folder_path, f'조건문{current_time}.csv'), encoding='cp949', index=False)
-        # if format == 'excel' :
-        #     self.result.to_excel(os.path.join(self.folder_path, f'결과{current_time}.xlsx'), encoding='cp949', index=False)
+            self.result.to_csv(os.path.join(self.folder_path, f'결과_{current_time}.csv'), encoding='cp949', index=False)
+        if format == 'excel' :
+            self.result.to_excel(os.path.join(self.folder_path, f'결과_{current_time}.xlsx'), encoding='cp949', index=False)
         
 
     def open_folder(self):
@@ -780,27 +829,28 @@ class Ui_MainWindow(object):
         os.startfile(self.folder_path)  # For Windows
 
 
-    class Worker(QThread) :
-        progressChanged = Signal(int)
-        def __init__(self, parent) :
-            super().__init__(parent)
-            self.parent = parent
+    # class Worker(QThread) :
+    #     progressChanged = Signal(int)
+    #     def __init__(self, parent) :
+    #         super().__init__(parent)
+    #         self.parent = parent
         
-        def run(self):
-            self.parent.result = self.parent.naver.fetch(
-                complexNos=[int(id) for id in self.parent.ids],
-                tradeType=self.parent.tradeType,
-                areaNos='',
-                page=1,
-                rentPriceMin=self.parent.minPrice,
-                rentPriceMax=self.parent.maxPrice,
-                priceMin=self.parent.minPrice,
-                priceMax=self.parent.maxPrice,
-                areaMin=self.parent.areaMin,
-                areaMax=self.parent.areaMax,
-                oldBuildYears=self.parent.oldBuildYears,
-                recentlyBuildYears=self.parent.recentlyBuildYears,
-                minHouseHoldCount=self.parent.minHouseHoldCount,
-                maxHouseHoldCount=self.parent.maxHouseHoldCount,
-                progressChanged=self.progressChanged,
-            )
+    #     def run(self):
+    #         self.parent.result = self.parent.naver.fetch(
+    #             complexNos=[int(id) for id in self.parent.ids],
+    #             realEstateType = self.parent.realEstateType,
+    #             tradeType=self.parent.tradeType,
+    #             areaNos='',
+    #             page=1,
+    #             rentPriceMin=self.parent.minPrice,
+    #             rentPriceMax=self.parent.maxPrice,
+    #             priceMin=self.parent.minPrice,
+    #             priceMax=self.parent.maxPrice,
+    #             areaMin=self.parent.areaMin,
+    #             areaMax=self.parent.areaMax,
+    #             oldBuildYears=self.parent.oldBuildYears,
+    #             recentlyBuildYears=self.parent.recentlyBuildYears,
+    #             minHouseHoldCount=self.parent.minHouseHoldCount,
+    #             maxHouseHoldCount=self.parent.maxHouseHoldCount,
+    #             progressChanged=self.progressChanged,
+    #         )
