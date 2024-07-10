@@ -304,6 +304,13 @@ class Naver_seoul_land(FileManager) :
             time.sleep(sleep)
 
             df = pd.DataFrame(results) # 판다스 데이터프레임
+            if len(df) == 0 :
+                df = pd.DataFrame(columns=self.cols_article)                
+            
+            if 'floorInfo' in df.columns :
+                df['floorInfo'] = df['floorInfo'].apply(lambda x : f"{x}층")
+            if 'dealOrWarrantPrc' in df.columns :
+                df['dealOrWarrantPrc'] = df['dealOrWarrantPrc'].apply(self.convert_price)
 
             self.articles = df # 인스턴스로 저장
         

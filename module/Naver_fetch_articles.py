@@ -85,5 +85,11 @@ class Naver_fetch_articles(Naver_seoul_land) :
         progressChanged.emit(100)
         progressNameChanged.emit('완료')
 
+        cols = list(ult_results.columns)
+        for col in cols :
+            if col in self.cols_translation :
+                cols[cols.index(col)] = self.cols_translation[col]
+        ult_results.columns = cols
+
         return ult_results
             

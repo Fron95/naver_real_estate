@@ -106,10 +106,45 @@ class FileManager:
         self.cols_info = ['complexTypeName', 'complexName', 'totalHouseHoldCount', 'totalDongCount', 'useApproveYmd', 'minArea', 'maxArea']
         self.cols_pyeongs = ['pyeongs']
 
-        self.kor_cols_article = ['게시글번호', '게시글이름', '부동산유형', '거래유형', '층정보', '가격수정여부', '거래가격', '지역이름', '면적1', '면적2', '방향', '게시글확인날짜', '게시글특징설명', '태그목록', '건물명', '같은주소개수', '같은주소최고가', '같은주소최저가', '평수']
-        self.kor_cols_trade = ['거래유형', '층', '포맷된가격', '포맷된거래년월']
-        self.kor_cols_info = ['단지유형', '단지명', '총세대수', '총동수', '사용승인날짜', '최소면적', '최대면적']
-        self.kor_cols_pyeongs = ['평수']
+        self.cols_translation = {
+            'provinceName' : '시/도',
+            'districtName' : '시/구',
+            'dongName' : '동/읍/면',
+            'complexName' : '물건이름',
+            'realEstateType' : '물건종류',
+            'complexLatitude' : '위도',
+            'complexLongitude' : '경도',
+    'articleNo': '게시글번호',
+    'articleName': '게시글이름',
+    'realEstateTypeName': '부동산유형',
+    'tradeTypeName': '거래유형',
+    'floorInfo': '층정보',
+    'isPriceModification': '가격수정여부',
+    'dealOrWarrantPrc': '거래가격',
+    'areaName': '지역이름',
+    'area1': '공급면적',
+    'area2': '전용면적',
+    'direction': '방향',
+    'articleConfirmYmd': '게시글확인날짜',
+    'articleFeatureDesc': '게시글특징설명',
+    'tagList': '태그목록',
+    'buildingName': '건물명',
+    'sameAddrCnt': '같은매물개수',
+    'sameAddrMaxPrc': '같은매물최고가',
+    'sameAddrMinPrc': '같은매물최저가',
+    'pyeongs': '보유평수(제곱미터)',
+        'tradeType': '거래유형',
+    'floor': '층',
+    'formattedPrice': '포맷된가격',
+    'formattedTradeYearMonth': '포맷된거래년월',
+        'complexTypeName': '단지유형',
+    'complexName': '단지명',
+    'totalHouseHoldCount': '총세대수',
+    'totalDongCount': '총동수',
+    'useApproveYmd': '사용승인날짜',
+    'minArea': '최소면적',
+    'maxArea': '최대면적',
+}
 
 
     # 이하는 아직 정립되지 않았음.
@@ -142,6 +177,22 @@ class FileManager:
             self.apts_trade = self.load('trade')
         except:
             pass
+    def convert_price(self, x):
+                if isinstance(x, int):
+                    return x * 10000 if x <= 100 else x
+                if not isinstance(x, str):
+                    return x
+                try:
+                    if '억' in x:
+                        parts = x.split('억')
+                        if len(parts) == 2 and parts[1].strip():
+                            return int(parts[0].strip()) * 10000 + int(re.sub(r'[^\d]', '', parts[1]))
+                        else:
+                            return int(parts[0].strip()) * 10000
+                    else:
+                        return int(re.sub(r'[^\d]', '', x))
+                except ValueError:
+                    return x
 
     def save(self, data, kind):
         if isinstance(data, dict) and all(isinstance(v, (int, float, str)) for v in data.values()):
@@ -149,29 +200,14 @@ class FileManager:
         else:
             df = pd.DataFrame(data)
 
-        def convert_price(x):
-            if isinstance(x, int):
-                return x * 10000 if x <= 100 else x
-            if not isinstance(x, str):
-                return x
-            try:
-                if '억' in x:
-                    parts = x.split('억')
-                    if len(parts) == 2 and parts[1].strip():
-                        return int(parts[0].strip()) * 10000 + int(re.sub(r'[^\d]', '', parts[1]))
-                    else:
-                        return int(parts[0].strip()) * 10000
-                else:
-                    return int(re.sub(r'[^\d]', '', x))
-            except ValueError:
-                return x
+        
         
         if kind == 'article':
             df['floorInfo'] = df['floorInfo'].apply(lambda x: x+'층')
-            df['dealOrWarrantPrc'] = df['dealOrWarrantPrc'].apply(convert_price)
+            df['dealOrWarrantPrc'] = df['dealOrWarrantPrc'].apply(self.convert_price)
             df.to_csv(self.article_dir, encoding='cp949', index=False)
         elif kind == 'trade':
-            df['formattedPrice'] = df['formattedPrice'].apply(convert_price)
+            df['formattedPrice'] = df['formattedPrice'].apply(self.convert_price)
             df.to_csv(self.trade_dir, encoding='cp949', index=False)
         elif kind == 'info':
             df.to_csv(self.info_dir, encoding='cp949', index=False)

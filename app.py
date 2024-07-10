@@ -53,7 +53,7 @@ class Ui_MainWindow(object):
         self.folder_path = self.filemanager.result_folder
         self.cookies = None
         tik = time.time()
-        self.load_header_cookies()
+        # self.load_header_cookies()
         tok = time.time()
         print(tok - tik,"초가소요되었습니다. 쿠키가져오는데")
         print(self.cookies)
@@ -110,13 +110,17 @@ class Ui_MainWindow(object):
         self.groupBox_2 = QGroupBox(self.centralwidget)
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.groupBox_2.setGeometry(QRect(1010, 520, 231, 411))
-        self.label_3 = QLabel(self.groupBox_2)
-        self.label_3.setObjectName(u"label_3")
-        self.label_3.setGeometry(QRect(10, 20, 141, 21))
-        self.label_3.setStyleSheet(u"font-size :15px;")
+
         self.listWidget_selected = QListWidget(self.groupBox_2)
         self.listWidget_selected.setObjectName(u"listWidget_selected")
         self.listWidget_selected.setGeometry(QRect(10, 50, 211, 361))
+
+        self.pushButton_selectAll_selected = QPushButton(self.groupBox_2)
+        self.pushButton_selectAll_selected.setObjectName(u"pushButton_selectAll_selected")
+        self.pushButton_selectAll_selected.setGeometry(QRect(10, 20, 211, 20))
+        self.pushButton_selectAll_selected.setText(u"전체선택/해제")
+        self.pushButton_selectAll_selected.clicked.connect(lambda : self.selectAllOrNone(self.listWidget_selected))
+
         self.pushButton_add = QPushButton(self.centralwidget)
         self.pushButton_add.setObjectName(u"pushButton_add")
         self.pushButton_add.setGeometry(QRect(920, 640, 75, 61))
@@ -420,6 +424,21 @@ class Ui_MainWindow(object):
         self.splitter_3.setOrientation(Qt.Horizontal)
         self.splitter_2.addWidget(self.splitter_3)
         self.splitter.addWidget(self.splitter_2)
+        self.splitter_all_select = QSplitter(self.groupBox)
+        
+        self.splitter_all = QSplitter(self.groupBox)
+        self.splitter_all.setObjectName(u"splitter_all")
+        self.splitter_all.setGeometry(QRect(20, 20, 871, 361))
+        self.splitter_all.setOrientation(Qt.Horizontal)
+        
+        
+            
+
+
+            
+        
+
+
         self.splitter_5 = QSplitter(self.groupBox)
         self.splitter_5.setObjectName(u"splitter_5")
         self.splitter_5.setGeometry(QRect(20, 50, 871, 361))
@@ -454,10 +473,33 @@ class Ui_MainWindow(object):
 
 
         # 다중 선택 가능하게 설정
-        # self.listWidget_1.setSelectionMode(QAbstractItemView.MultiSelection)  # 다중 선택 가능하게 설정
+        self.listWidget_1.setSelectionMode(QAbstractItemView.MultiSelection)  # 다중 선택 가능하게 설정
         self.listWidget_2.setSelectionMode(QAbstractItemView.MultiSelection)  # 다중 선택 가능하게 설정
         self.listWidget_3.setSelectionMode(QAbstractItemView.MultiSelection)  # 다중 선택 가능하게 설정
         self.listWidget_4.setSelectionMode(QAbstractItemView.MultiSelection)  # 다중 선택 가능하게 설정
+        self.listWidget_selected.setSelectionMode(QAbstractItemView.MultiSelection)  # 다중 선택 가능하게 설정
+
+        # 전체선택기능
+        # 전체선택버튼
+        self.pushButton_selectAll_1 = QPushButton(self.splitter_all)
+        self.pushButton_selectAll_1.setText(u"전체선택/해제")
+        self.pushButton_selectAll_1.setObjectName(u"pushButton_selectAll_1")
+        self.pushButton_selectAll_1.clicked.connect(lambda : self.selectAllOrNone(self.listWidget_1))
+
+        self.pushButton_selectAll_2 = QPushButton(self.splitter_all)
+        self.pushButton_selectAll_2.setText(u"전체선택/해제")
+        self.pushButton_selectAll_2.setObjectName(u"pushButton_selectAll_2")
+        self.pushButton_selectAll_2.clicked.connect(lambda : self.selectAllOrNone(self.listWidget_2))
+
+        self.pushButton_selectAll_3 = QPushButton(self.splitter_all)
+        self.pushButton_selectAll_3.setText(u"전체선택/해제")
+        self.pushButton_selectAll_3.setObjectName(u"pushButton_selectAll_3")
+        self.pushButton_selectAll_3.clicked.connect(lambda : self.selectAllOrNone(self.listWidget_3))
+
+        self.pushButton_selectAll_4 = QPushButton(self.splitter_all)
+        self.pushButton_selectAll_4.setText(u"전체선택/해제")
+        self.pushButton_selectAll_4.setObjectName(u"pushButton_selectAll_4")
+        self.pushButton_selectAll_4.clicked.connect(lambda : self.selectAllOrNone(self.listWidget_4))
 
 
         self.splitter_18.addWidget(self.groupBox)
@@ -488,7 +530,6 @@ class Ui_MainWindow(object):
         self.pushButton_openFolder.setText(QCoreApplication.translate("MainWindow", u"\ub2e4\uc6b4\ub85c\ub4dc \ud3f4\ub354 \uc5f4\uae30", None))
 
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"GroupBox", None))
-        self.label_3.setText(QCoreApplication.translate("MainWindow", u"\uc120\ud0dd\ub41c \uc9c0\uc5ed/\ubb3c\uac74", None))
         self.pushButton_add.setText(QCoreApplication.translate("MainWindow", u"\ucd94\uac00 \u25b6", None))
         self.pushButton_delete.setText(QCoreApplication.translate("MainWindow", u"\u25c0 \uc81c\uac70", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"\uc885\ub958", None))
@@ -730,24 +771,27 @@ class Ui_MainWindow(object):
         # self.listWidget_4.selectAll()
         # complex_names.extend(matching_rows['complexName'].unique())
     
+
     def get_selected_complex_data(self):
-     selected_items = self.listWidget_4.selectedItems()
-     for index in range(len(selected_items)):
-         item = selected_items[index]
-         item_data = item.data(Qt.UserRole)  # 고유한 데이터 가져오기
- 
-         # 중복 여부를 확인
-         duplicate_found = False
-         for i in range(self.listWidget_selected.count()):
-             existing_item = self.listWidget_selected.item(i)
-             if existing_item.data(Qt.UserRole) == item_data:
-                 duplicate_found = True
-                 break
- 
-         if not duplicate_found:
-             copied_item = QListWidgetItem(item)
-             copied_item.setData(Qt.UserRole, item_data)  # 데이터 설정
-             self.listWidget_selected.addItem(copied_item)
+        selected_items = self.listWidget_4.selectedItems()
+        
+        # 이미 등록된 아이템 데이터 집합 생성
+        existing_items_data = {self.listWidget_selected.item(i).data(Qt.UserRole) for i in range(self.listWidget_selected.count())}
+        
+        tik = time.time()
+
+        for item in selected_items:
+            item_data = item.data(Qt.UserRole)  # 고유한 데이터 가져오기
+            
+            if item_data not in existing_items_data:
+                copied_item = QListWidgetItem(item)
+                copied_item.setData(Qt.UserRole, item_data)  # 데이터 설정
+                self.listWidget_selected.addItem(copied_item)
+                existing_items_data.add(item_data)  # 집합에 추가하여 중복 방지
+
+        tok = time.time()
+        print(f"{tok - tik:.4f}초가 소요되었습니다.")
+
 
     def delete_selected_items(self):
         selected_items = self.listWidget_selected.selectedItems()
@@ -972,6 +1016,24 @@ class Ui_MainWindow(object):
 
         # 셀레니움 종료
         self.driver.quit()
+
+
+    def selectAllOrNone(self, target):
+        if len(target.selectedItems()) < target.count():
+            target.selectAll()
+        else:
+            target.clearSelection()
+
+    def measure_time(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.perf_counter()
+            result = func(*args, **kwargs)
+            end_time = time.perf_counter()
+            elapsed_time = end_time - start_time
+            print(f"{func.__name__} executed in {elapsed_time:.4f} seconds")
+            return result
+        return wrapper
+
 
 
 
