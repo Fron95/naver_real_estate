@@ -3,3 +3,4 @@ venv
 app.exe
 app.spec
 부동산/
+dist/
