@@ -101,7 +101,7 @@ class FileManager:
         # self.total_apts = pd.read_csv(self.total_complex_path, encoding='cp949') # CSV 파일 읽기
         # self.apts = pd.read_csv(self.total_complex_path, encoding='cp949') # CSV 파일 읽기
 
-        self.cols_article = ['articleNo', 'articleName', 'realEstateTypeName', 'tradeTypeName', 'floorInfo', 'isPriceModification', 'dealOrWarrantPrc', 'areaName', 'area1', 'area2', 'direction', 'articleConfirmYmd', 'articleFeatureDesc', 'tagList', 'buildingName', 'sameAddrCnt', 'sameAddrMaxPrc', 'sameAddrMinPrc', 'pyeongs']
+        self.cols_article = ['articleNo', 'articleName', 'tradeTypeName', 'areaName', 'dealOrWarrantPrc', 'floorInfo', 'realEstateTypeName',  'isPriceModification',  'area1', 'area2', 'direction', 'articleConfirmYmd', 'articleFeatureDesc', 'tagList', 'buildingName', 'sameAddrCnt', 'sameAddrMaxPrc', 'sameAddrMinPrc']
         self.cols_trade = ['tradeType', 'floor', 'formattedPrice', 'formattedTradeYearMonth']
         self.cols_info = ['complexTypeName', 'complexName', 'totalHouseHoldCount', 'totalDongCount', 'useApproveYmd', 'minArea', 'maxArea']
         self.cols_pyeongs = ['pyeongs']
@@ -120,7 +120,7 @@ class FileManager:
     'tradeTypeName': '거래유형',
     'floorInfo': '층정보',
     'isPriceModification': '가격수정여부',
-    'dealOrWarrantPrc': '거래가격',
+    'dealOrWarrantPrc': '거래가격(만원)',
     'areaName': '지역이름',
     'area1': '공급면적',
     'area2': '전용면적',
@@ -131,7 +131,7 @@ class FileManager:
     'buildingName': '건물명',
     'sameAddrCnt': '같은매물개수',
     'sameAddrMaxPrc': '같은매물최고가',
-    'sameAddrMinPrc': '같은매물최저가',
+    'sameAddrMinPrc': '같은매convert_price물최저가',
     'pyeongs': '보유평수(제곱미터)',
         'tradeType': '거래유형',
     'floor': '층',

@@ -5,8 +5,9 @@ import time
 import numpy as np
 
 class Naver_fetch_articles(Naver_seoul_land) :
-    def __init__(self) :
-        super().__init__()
+    def __init__(self, authorization_token = None, cookies = None) :
+        super().__init__(authorization_token=authorization_token, cookies=cookies)
+        self.running = True
         
     # todo : 셀레니움으로 header를 좀 가져와야한다.
     def fetch(self, 
@@ -28,7 +29,9 @@ class Naver_fetch_articles(Naver_seoul_land) :
               delay = 2.0,
               progressChanged=None,
               progressNameChanged=None,
-              resultReady=None) : 
+              resultChanged=None,
+              running=None,
+              ) : 
         
         realEstateType = "APT:PRE"
         # 수집할 컨테이너
@@ -41,6 +44,10 @@ class Naver_fetch_articles(Naver_seoul_land) :
         if progressChanged : progressChanged.emit(progress)
 
         for complexNo in complexNos : 
+            if not self.running :
+                break
+
+
             time.sleep(np.random.randint(delay))
             # 상태표시창
             if progressNameChanged : 
@@ -70,11 +77,14 @@ class Naver_fetch_articles(Naver_seoul_land) :
                 minHouseHoldCount = minHouseHoldCount,
                 maxHouseHoldCount = maxHouseHoldCount,)
             
-            for col in info.columns :
-                articles[col] = info[col].values[0]
+            for idx, col in enumerate(list(info.columns)) :
+                # articles[col] = info[col].values[0]
+                articles.insert(idx,col, info[col].values[0])
                 
 
             ult_results = pd.concat([ult_results, articles])
+
+            resultChanged.emit(ult_results)
 
             # 상태표시창
             if progressChanged :
@@ -82,8 +92,12 @@ class Naver_fetch_articles(Naver_seoul_land) :
                 progress = trial/total*100
                 progressChanged.emit(progress)
         
-        progressChanged.emit(100)
-        progressNameChanged.emit('완료')
+        
+        
+        if progressChanged and progressNameChanged :
+            progressChanged.emit(100)
+            progressNameChanged.emit('완료')
+        print('완료우')
 
         cols = list(ult_results.columns)
         for col in cols :

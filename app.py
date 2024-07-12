@@ -7,18 +7,24 @@
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
+import copy
+import json
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect, QThread, Signal,
+    QMetaObject, QObject, QPoint, QRect, QThread, Signal,QEventLoop,
     QSize, QTime, QUrl, Qt)
 from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QCursor, QFont, QFontDatabase, QGradient, 
-    QIcon, QImage, QKeySequence, QLinearGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient, 
     QPainter, QPalette, QPixmap, QRadialGradient, QMovie,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QGroupBox, QLabel,
-    QListWidget, QListWidgetItem, QMainWindow, QMenu, QToolButton, QDoubleSpinBox,
-    QMenuBar, QProgressBar, QPushButton, QSizePolicy,QDialog,QVBoxLayout,
+    QListWidget, QListWidgetItem, QMainWindow, QMenu, QToolButton, QDoubleSpinBox, QMessageBox,
+    QMenuBar, QProgressBar, QPushButton, QSizePolicy,QDialog,QVBoxLayout, QComboBox, QPlainTextEdit,
     QSpinBox, QSplitter, QStatusBar, QWidget, QAbstractItemView)
+
+# superqt
+from superqt import QRangeSlider
+
 import pandas as pd
 import os
 from datetime import datetime
@@ -44,14 +50,14 @@ import time
 
 
 class Ui_MainWindow(object):
-    def __init__(self) :
-        
-        self.naver = Naver_fetch_articles()
+    def __init__(self, authorization_token = None, cookies = None) :
         self.filemanager = FileManager()        
-        self.data = self.naver.total_apts_naver_got.copy()
         self.result = pd.DataFrame()
         self.folder_path = self.filemanager.result_folder
-        self.cookies = None
+        self.naver = Naver_fetch_articles(authorization_token = authorization_token, cookies = cookies)
+        self.data = self.naver.total_apts_naver_got.copy()
+        self.authorization = self.naver.authorization
+        self.cookies = self.naver.cookies
         tik = time.time()
         # self.load_header_cookies()
         tok = time.time()
@@ -80,12 +86,34 @@ class Ui_MainWindow(object):
         self.progresslabel.setGeometry(380, 950, 281, 32)
         self.progresslabel.setStyleSheet(u"font-size:20px;")
 
+        
+        
+        
+        
+        
+        
+
+
         # ToolButton 추가
         self.toolButton = QToolButton(self.centralwidget)
         self.toolButton.setObjectName(u"toolButton")
         self.toolButton.setGeometry(QRect(750, 950, 41, 41))
         self.toolButton.clicked.connect(self.show_dialog)
         self.toolButton.setText('...')
+
+
+        # 중단버튼 추가
+        self.pushButton_stop = QPushButton(self.centralwidget)
+        self.pushButton_stop.setObjectName(u"pushButton_stop")
+        self.pushButton_stop.setGeometry(QRect(1120, 950, 131, 41))
+        self.pushButton_stop.clicked.connect(self.stop_fetching)
+        self.pushButton_stop.setText('수집중단')
+        self.pushButton_stop.setStyleSheet(u"background-color:red;\n"
+"color:white;\n"
+"font-size:20px;\n"
+"")
+        self.pushButton_stop.setVisible(False)
+        
 
         self.pushButton_start = QPushButton(self.centralwidget)
         self.pushButton_start.setObjectName(u"pushButton_start")
@@ -110,8 +138,9 @@ class Ui_MainWindow(object):
         self.groupBox_2 = QGroupBox(self.centralwidget)
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.groupBox_2.setGeometry(QRect(1010, 520, 231, 411))
-
+        
         self.listWidget_selected = QListWidget(self.groupBox_2)
+        
         self.listWidget_selected.setObjectName(u"listWidget_selected")
         self.listWidget_selected.setGeometry(QRect(10, 50, 211, 361))
 
@@ -206,7 +235,7 @@ class Ui_MainWindow(object):
         self.spinBox_maxPrice.setMinimum(1)
         self.spinBox_maxPrice.setMaximum(900000000)
         self.spinBox_maxPrice.setSingleStep(1000)
-        self.spinBox_maxPrice.setValue(900000000)
+        self.spinBox_maxPrice.setValue(1000000)
         self.label_4 = QLabel(self.groupBox_5)
         self.label_4.setObjectName(u"label_4")
         self.label_4.setGeometry(QRect(440, 50, 201, 16))
@@ -224,58 +253,81 @@ class Ui_MainWindow(object):
         self.groupBox_6.setStyleSheet(u"font-size :15px;")
         self.splitter_10 = QSplitter(self.groupBox_6)
         self.splitter_10.setObjectName(u"splitter_10")
-        self.splitter_10.setGeometry(QRect(30, 30, 731, 20))
+        self.splitter_10.setGeometry(QRect(30, 30, 300, 20))
         self.splitter_10.setOrientation(Qt.Horizontal)
         self.splitter_11 = QSplitter(self.splitter_10)
         self.splitter_11.setObjectName(u"splitter_11")
         self.splitter_11.setOrientation(Qt.Horizontal)
-        self.checkBox_area_10 = QCheckBox(self.splitter_11)
-        self.checkBox_area_10.setObjectName(u"checkBox_area_10")
-        self.checkBox_area_10.stateChanged.connect(self.get_infos)
-        self.checkBox_area_10.setChecked(True)
-        self.splitter_11.addWidget(self.checkBox_area_10)
-        self.checkBox_area_20 = QCheckBox(self.splitter_11)
-        self.checkBox_area_20.setObjectName(u"checkBox_area_20")
-        self.checkBox_area_20.stateChanged.connect(self.get_infos)
-        self.checkBox_area_20.setChecked(True)
-        self.splitter_11.addWidget(self.checkBox_area_20)
-        self.checkBox_area_30 = QCheckBox(self.splitter_11)
-        self.checkBox_area_30.setObjectName(u"checkBox_area_30")
-        self.checkBox_area_30.stateChanged.connect(self.get_infos)
-        self.checkBox_area_30.setChecked(True)
-        self.splitter_11.addWidget(self.checkBox_area_30)
-        self.checkBox_area_40 = QCheckBox(self.splitter_11)
-        self.checkBox_area_40.setObjectName(u"checkBox_area_40")
-        self.checkBox_area_40.stateChanged.connect(self.get_infos)
-        self.checkBox_area_40.setChecked(True)
-        self.splitter_11.addWidget(self.checkBox_area_40)
-        self.checkBox_area_50 = QCheckBox(self.splitter_11)
-        self.checkBox_area_50.setObjectName(u"checkBox_area_50")
-        self.checkBox_area_50.stateChanged.connect(self.get_infos)
-        self.checkBox_area_50.setChecked(True)
-        self.splitter_11.addWidget(self.checkBox_area_50)
-        self.checkBox_area_60 = QCheckBox(self.splitter_11)
-        self.checkBox_area_60.setObjectName(u"checkBox_area_60")
-        self.checkBox_area_60.stateChanged.connect(self.get_infos)
-        self.checkBox_area_60.setChecked(True)
-        self.splitter_11.addWidget(self.checkBox_area_60)
-        self.checkBox_area_70 = QCheckBox(self.splitter_11)
-        self.checkBox_area_70.setObjectName(u"checkBox_area_70")
-        self.checkBox_area_70.stateChanged.connect(self.get_infos)
-        self.checkBox_area_70.setChecked(True)
-        self.checkBox_area_70.setTristate(False)
-        self.splitter_11.addWidget(self.checkBox_area_70)
-        self.checkBox_area_max = QCheckBox(self.splitter_11)
-        self.checkBox_area_max.setObjectName(u"checkBox_area_max")
-        self.checkBox_area_max.stateChanged.connect(self.get_infos)
-        self.checkBox_area_max.setChecked(True)
-        self.checkBox_area_max.setTristate(False)
-        self.splitter_11.addWidget(self.checkBox_area_max)
+
+        # 평수범위
+        self.comboBox_areaMin = QComboBox(self.splitter_11)
+        self.comboBox_areaMin.setObjectName(u"comboBox_areaMin")
+        self.label_areaRange = QLabel("< 면적 <",self.splitter_11)
+        self.comboBox_areaMax = QComboBox(self.splitter_11)
+        self.comboBox_areaMax.setObjectName(u"comboBox_areaMax")
+        self.comboBox_areaMin.currentIndexChanged.connect(self.get_infos)
+        self.comboBox_areaMax.currentIndexChanged.connect(self.get_infos)
+
+        self.areaMinList = ['0평','10평','20평','30평','40평','50평','60평','70평' ]
+        self.areaMaxList = ['10평','20평','30평','40평','50평','60평','70평',"70평~" ]
+
+        for area in  self.areaMinList :
+            self.comboBox_areaMin.addItem(area)
+        for area in  self.areaMaxList :
+            self.comboBox_areaMax.addItem(area)
+        self.comboBox_areaMax.setCurrentIndex(self.comboBox_areaMax.count()-1)
+        self.splitter_11.setSizes([100, 50, 100])
+
+
+
+
+        # self.slider = QRangeSlider(self.groupBox_5)
+        # self.slider.setOrientation(Qt.Horizontal)
+        # self.slider.setValue((20, 80))
+        # self.checkBox_area_00 = QCheckBox(self.splitter_11)
+        # self.checkBox_area_00.setObjectName(u"checkBox_area_00")
+        # self.checkBox_area_00.clicked.connect(self.get_infos)
+        # self.checkBox_area_00.setChecked(True)
+        # self.splitter_11.addWidget(self.checkBox_area_00)
+        # self.checkBox_area_10 = QCheckBox(self.splitter_11)
+        # self.checkBox_area_10.setObjectName(u"checkBox_area_10")
+        # self.checkBox_area_10.clicked.connect(self.get_infos)
+        # self.checkBox_area_10.setChecked(True)
+        # self.splitter_11.addWidget(self.checkBox_area_10)
+        # self.checkBox_area_20 = QCheckBox(self.splitter_11)
+        # self.checkBox_area_20.setObjectName(u"checkBox_area_20")
+        # self.checkBox_area_20.clicked.connect(self.get_infos)
+        # self.checkBox_area_20.setChecked(True)
+        # self.splitter_11.addWidget(self.checkBox_area_20)
+        # self.checkBox_area_30 = QCheckBox(self.splitter_11)
+        # self.checkBox_area_30.setObjectName(u"checkBox_area_30")
+        # self.checkBox_area_30.clicked.connect(self.get_infos)
+        # self.checkBox_area_30.setChecked(True)
+        # self.splitter_11.addWidget(self.checkBox_area_30)
+        # self.checkBox_area_40 = QCheckBox(self.splitter_11)
+        # self.checkBox_area_40.setObjectName(u"checkBox_area_40")
+        # self.checkBox_area_40.clicked.connect(self.get_infos)
+        # self.checkBox_area_40.setChecked(True)
+        # self.splitter_11.addWidget(self.checkBox_area_40)
+        # self.checkBox_area_50 = QCheckBox(self.splitter_11)
+        # self.checkBox_area_50.setObjectName(u"checkBox_area_50")
+        # self.checkBox_area_50.clicked.connect(self.get_infos)
+        # self.checkBox_area_50.setChecked(True)
+        # self.splitter_11.addWidget(self.checkBox_area_50)
+        # self.checkBox_area_60 = QCheckBox(self.splitter_11)
+        # self.checkBox_area_60.setObjectName(u"checkBox_area_60")
+        # self.checkBox_area_60.clicked.connect(self.get_infos)
+        # self.checkBox_area_60.setChecked(True)
+        # self.checkBox_area_60.setTristate(False)
+        # self.splitter_11.addWidget(self.checkBox_area_60)
         self.splitter_10.addWidget(self.splitter_11)
         self.label_areaRange = QLabel(self.groupBox_6)
         self.label_areaRange.setObjectName(u"label_areaRange")
         self.label_areaRange.setGeometry(QRect(800, 10, 411, 51))
         self.label_areaRange.setStyleSheet(u"color : red;\n"
+                                           
+        #    평 / 제곱미터 구분
+
 "")
         self.splitter_17.addWidget(self.groupBox_6)
         self.groupBox_7 = QGroupBox(self.splitter_17)
@@ -283,56 +335,81 @@ class Ui_MainWindow(object):
         self.groupBox_7.setStyleSheet(u"font-size :15px;")
         self.splitter_12 = QSplitter(self.groupBox_7)
         self.splitter_12.setObjectName(u"splitter_12")
-        self.splitter_12.setGeometry(QRect(10, 40, 581, 20))
+        self.splitter_12.setGeometry(QRect(30, 30, 300, 20))
         self.splitter_12.setOrientation(Qt.Horizontal)
         self.splitter_13 = QSplitter(self.splitter_12)
         self.splitter_13.setObjectName(u"splitter_13")
         self.splitter_13.setOrientation(Qt.Horizontal)
-        self.checkBox_approvalDate_0 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_0.setObjectName(u"checkBox_approvalDate_0")
-        self.checkBox_approvalDate_0.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_0.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_0)
-        self.checkBox_approvalDate_2 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_2.setObjectName(u"checkBox_approvalDate_2")
-        self.checkBox_approvalDate_2.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_2.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_2)
-        self.checkBox_approvalDate_4 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_4.setObjectName(u"checkBox_approvalDate_4")
-        self.checkBox_approvalDate_4.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_4.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_4)
-        self.checkBox_approvalDate_10 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_10.setObjectName(u"checkBox_approvalDate_10")
-        self.checkBox_approvalDate_10.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_10.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_10)
-        self.checkBox_approvalDate_15 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_15.setObjectName(u"checkBox_approvalDate_15")
-        self.checkBox_approvalDate_15.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_15.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_15)
-        self.checkBox_approvalDate_20 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_20.setObjectName(u"checkBox_approvalDate_20")
-        self.checkBox_approvalDate_20.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_20.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_20)
-        self.checkBox_approvalDate_25 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_25.setObjectName(u"checkBox_approvalDate_25")
-        self.checkBox_approvalDate_25.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_25.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_25)
-        self.checkBox_approvalDate_30 = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_30.setObjectName(u"checkBox_approvalDate_30")
-        self.checkBox_approvalDate_30.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_30.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_30)
-        self.checkBox_approvalDate_max = QCheckBox(self.splitter_13)
-        self.checkBox_approvalDate_max.setObjectName(u"checkBox_approvalDate_max")
-        self.checkBox_approvalDate_max.stateChanged.connect(self.get_infos)
-        self.checkBox_approvalDate_max.setChecked(True)
-        self.splitter_13.addWidget(self.checkBox_approvalDate_max)
+                # 현재 연도 계산
+        self.current_year = datetime.now().year
+        self.years = ["40","35","30", "25", "20", "15", "10","5","0"]
+        
+
+        # 승인 날짜 범위
+        self.comboBox_old = QComboBox(self.splitter_13)
+        self.comboBox_old.setObjectName("comboBox_old")
+        self.label_dateRange = QLabel("< 승인 날짜 <", self.splitter_13)
+        self.comboBox_recent = QComboBox(self.splitter_13)
+        self.comboBox_recent.setObjectName("comboBox_recent")
+        self.recentList = [f"{year}년 전" for year in self.years] + ["입주예정"]
+        self.oldList = ["최고"] + [f"{year}년 전" for year in self.years]
+        
+        self.splitter_13.setSizes([100, 50, 100])
+
+        for year in self.recentList:
+            self.comboBox_recent.addItem(year)
+        for year in self.oldList:
+            self.comboBox_old.addItem(year)
+        self.comboBox_recent.setCurrentIndex(len(self.oldList) - 2)
+
+        self.comboBox_recent.currentIndexChanged.connect(self.get_infos)
+        self.comboBox_old.currentIndexChanged.connect(self.get_infos)
+
+        # self.checkBox_approvalDate_0 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_0.setObjectName(u"checkBox_approvalDate_0")
+        # self.checkBox_approvalDate_0.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_0.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_0)
+        # self.checkBox_approvalDate_2 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_2.setObjectName(u"checkBox_approvalDate_2")
+        # self.checkBox_approvalDate_2.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_2.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_2)
+        # self.checkBox_approvalDate_4 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_4.setObjectName(u"checkBox_approvalDate_4")
+        # self.checkBox_approvalDate_4.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_4.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_4)
+        # self.checkBox_approvalDate_10 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_10.setObjectName(u"checkBox_approvalDate_10")
+        # self.checkBox_approvalDate_10.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_10.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_10)
+        # self.checkBox_approvalDate_15 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_15.setObjectName(u"checkBox_approvalDate_15")
+        # self.checkBox_approvalDate_15.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_15.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_15)
+        # self.checkBox_approvalDate_20 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_20.setObjectName(u"checkBox_approvalDate_20")
+        # self.checkBox_approvalDate_20.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_20.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_20)
+        # self.checkBox_approvalDate_25 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_25.setObjectName(u"checkBox_approvalDate_25")
+        # self.checkBox_approvalDate_25.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_25.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_25)
+        # self.checkBox_approvalDate_30 = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_30.setObjectName(u"checkBox_approvalDate_30")
+        # self.checkBox_approvalDate_30.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_30.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_30)
+        # self.checkBox_approvalDate_max = QCheckBox(self.splitter_13)
+        # self.checkBox_approvalDate_max.setObjectName(u"checkBox_approvalDate_max")
+        # self.checkBox_approvalDate_max.stateChanged.connect(self.get_infos)
+        # self.checkBox_approvalDate_max.setChecked(True)
+        # self.splitter_13.addWidget(self.checkBox_approvalDate_max)
         self.splitter_12.addWidget(self.splitter_13)
         self.label_approvalDateRange = QLabel(self.groupBox_7)
         self.label_approvalDateRange.setObjectName(u"label_approvalDateRange")
@@ -350,53 +427,75 @@ class Ui_MainWindow(object):
 "")
         self.splitter_14 = QSplitter(self.groupBox_8)
         self.splitter_14.setObjectName(u"splitter_14")
-        self.splitter_14.setGeometry(QRect(20, 30, 571, 24))
+        self.splitter_14.setGeometry(QRect(30, 30, 300, 20))
         self.splitter_14.setOrientation(Qt.Horizontal)
-        self.checkBox_totalHouseholds_0 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_0.setObjectName(u"checkBox_totalHouseholds_0")
-        self.checkBox_totalHouseholds_0.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_0.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_0)
-        self.checkBox_totalHouseholds_100 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_100.setObjectName(u"checkBox_totalHouseholds_100")
-        self.checkBox_totalHouseholds_100.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_100.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_100)
-        self.checkBox_totalHouseholds_300 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_300.setObjectName(u"checkBox_totalHouseholds_300")
-        self.checkBox_totalHouseholds_300.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_300.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_300)
-        self.checkBox_totalHouseholds_500 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_500.setObjectName(u"checkBox_totalHouseholds_500")
-        self.checkBox_totalHouseholds_500.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_500.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_500)
-        self.checkBox_totalHouseholds_700 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_700.setObjectName(u"checkBox_totalHouseholds_700")
-        self.checkBox_totalHouseholds_700.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_700.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_700)
-        self.checkBox_totalHouseholds_1000 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_1000.setObjectName(u"checkBox_totalHouseholds_1000")
-        self.checkBox_totalHouseholds_1000.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_1000.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_1000)
-        self.checkBox_totalHouseholds_1500 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_1500.setObjectName(u"checkBox_totalHouseholds_1500")
-        self.checkBox_totalHouseholds_1500.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_1500.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_1500)
-        self.checkBox_totalHouseholds_2000 = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_2000.setObjectName(u"checkBox_totalHouseholds_2000")
-        self.checkBox_totalHouseholds_2000.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_2000.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_2000)
-        self.checkBox_totalHouseholds_max = QCheckBox(self.splitter_14)
-        self.checkBox_totalHouseholds_max.setObjectName(u"checkBox_totalHouseholds_max")
-        self.checkBox_totalHouseholds_max.stateChanged.connect(self.get_infos)
-        self.checkBox_totalHouseholds_max.setChecked(True)
-        self.splitter_14.addWidget(self.checkBox_totalHouseholds_max)
+        
+
+
+        self.houseHolds = ['0', '300', '500', '700', '1000', '1500', '2000', '3000']
+        self.comboBox_minHouseHoldCount = QComboBox(self.splitter_14)
+        self.comboBox_minHouseHoldCount.setObjectName("comboBox_minHouseHoldCount")
+        self.comboBox_minHouseHoldCount.setCurrentIndex(0)
+        self.label_dateRange = QLabel("< 세대수 <", self.splitter_14)
+        self.comboBox_maxHouseHoldCount = QComboBox(self.splitter_14)
+        self.comboBox_maxHouseHoldCount.setObjectName("comboBox_maxHouseHoldCount")
+        
+        
+        self.comboBox_minHouseHoldCount.addItems(self.houseHolds[:-1])
+        self.comboBox_maxHouseHoldCount.addItems(self.houseHolds[1:] + ["최대"])
+        
+        self.comboBox_maxHouseHoldCount.setCurrentIndex(self.comboBox_maxHouseHoldCount.count() -3)
+        self.comboBox_minHouseHoldCount.currentIndexChanged.connect(self.get_infos)
+        self.comboBox_maxHouseHoldCount.currentIndexChanged.connect(self.get_infos)
+        self.splitter_14.setSizes([100, 50, 100])
+
+
+
+        # self.checkBox_totalHouseholds_0 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_0.setObjectName(u"checkBox_totalHouseholds_0")
+        # self.checkBox_totalHouseholds_0.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_0.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_0)
+        # self.checkBox_totalHouseholds_100 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_100.setObjectName(u"checkBox_totalHouseholds_100")
+        # self.checkBox_totalHouseholds_100.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_100.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_100)
+        # self.checkBox_totalHouseholds_300 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_300.setObjectName(u"checkBox_totalHouseholds_300")
+        # self.checkBox_totalHouseholds_300.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_300.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_300)
+        # self.checkBox_totalHouseholds_500 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_500.setObjectName(u"checkBox_totalHouseholds_500")
+        # self.checkBox_totalHouseholds_500.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_500.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_500)
+        # self.checkBox_totalHouseholds_700 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_700.setObjectName(u"checkBox_totalHouseholds_700")
+        # self.checkBox_totalHouseholds_700.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_700.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_700)
+        # self.checkBox_totalHouseholds_1000 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_1000.setObjectName(u"checkBox_totalHouseholds_1000")
+        # self.checkBox_totalHouseholds_1000.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_1000.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_1000)
+        # self.checkBox_totalHouseholds_1500 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_1500.setObjectName(u"checkBox_totalHouseholds_1500")
+        # self.checkBox_totalHouseholds_1500.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_1500.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_1500)
+        # self.checkBox_totalHouseholds_2000 = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_2000.setObjectName(u"checkBox_totalHouseholds_2000")
+        # self.checkBox_totalHouseholds_2000.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_2000.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_2000)
+        # self.checkBox_totalHouseholds_max = QCheckBox(self.splitter_14)
+        # self.checkBox_totalHouseholds_max.setObjectName(u"checkBox_totalHouseholds_max")
+        # self.checkBox_totalHouseholds_max.stateChanged.connect(self.get_infos)
+        # self.checkBox_totalHouseholds_max.setChecked(True)
+        # self.splitter_14.addWidget(self.checkBox_totalHouseholds_max)
         self.splitter_17.addWidget(self.groupBox_8)
         self.splitter_18 = QSplitter(self.centralwidget)
         self.splitter_18.setObjectName(u"splitter_18")
@@ -449,7 +548,12 @@ class Ui_MainWindow(object):
         
         # item1 = self.dataSetting(type='province')
         # self.listWidget_1.addItem(item1)
-        self.listWidget_1.addItems(list(self.data['provinceName'].unique()))
+        for provinceNo in list(self.data['provinceNo'].unique()) :
+            name = self.data[self.data['provinceNo'] == provinceNo]['provinceName'].values[0]
+            item = QListWidgetItem(name)
+            item.setData(Qt.UserRole, provinceNo)
+            self.listWidget_1.addItem(item)
+        # self.listWidget_1.addItems()
         self.listWidget_1.itemSelectionChanged.connect(self.display_district)
         self.splitter_5.addWidget(self.listWidget_1)
         self.listWidget_2 = QListWidget(self.splitter_5)
@@ -549,37 +653,36 @@ class Ui_MainWindow(object):
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"~", None))
         self.label_dealRange.setText(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c : ( ) ~ ( ) ", None))
         self.groupBox_6.setTitle(QCoreApplication.translate("MainWindow", u"\uba74\uc801", None))
-        self.checkBox_area_10.setText(QCoreApplication.translate("MainWindow", u"~10\ud3c9\ub300", None))
-        self.checkBox_area_20.setText(QCoreApplication.translate("MainWindow", u"20\ud3c9", None))
-        self.checkBox_area_30.setText(QCoreApplication.translate("MainWindow", u"30\ud3c9", None))
-        self.checkBox_area_40.setText(QCoreApplication.translate("MainWindow", u"40\ud3c9", None))
-        self.checkBox_area_50.setText(QCoreApplication.translate("MainWindow", u"50\ud3c9", None))
-        self.checkBox_area_60.setText(QCoreApplication.translate("MainWindow", u"60\ud3c9", None))
-        self.checkBox_area_70.setText(QCoreApplication.translate("MainWindow", u"70\ud3c9", None))
-        self.checkBox_area_max.setText(QCoreApplication.translate("MainWindow", u"70\ud3c9~", None))
+        # self.checkBox_area_00.setText(QCoreApplication.translate("MainWindow", u"00~33\u33A1\ub300", None))
+        # self.checkBox_area_10.setText(QCoreApplication.translate("MainWindow", u"33~66\u33A1", None))
+        # self.checkBox_area_20.setText(QCoreApplication.translate("MainWindow", u"66~99\u33A1", None))
+        # self.checkBox_area_30.setText(QCoreApplication.translate("MainWindow", u"99~132\u33A1", None))
+        # self.checkBox_area_40.setText(QCoreApplication.translate("MainWindow", u"132~165\u33A1", None))
+        # self.checkBox_area_50.setText(QCoreApplication.translate("MainWindow", u"165~198\u33A1", None))
+        # self.checkBox_area_60.setText(QCoreApplication.translate("MainWindow", u"198\u33A1~\uCD5C\uB300", None))
         self.label_areaRange.setText(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c : ( ) ~ ( ) ", None))
         self.groupBox_7.setTitle(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c", None))
-        self.checkBox_approvalDate_0.setText(QCoreApplication.translate("MainWindow", u"\uc785\uc8fc\uc608\uc815", None))
-        self.checkBox_approvalDate_2.setText(QCoreApplication.translate("MainWindow", u"2\ub144", None))
-        self.checkBox_approvalDate_4.setText(QCoreApplication.translate("MainWindow", u"4\ub144", None))
-        self.checkBox_approvalDate_10.setText(QCoreApplication.translate("MainWindow", u"10\ub144", None))
-        self.checkBox_approvalDate_15.setText(QCoreApplication.translate("MainWindow", u"15\ub144", None))
-        self.checkBox_approvalDate_20.setText(QCoreApplication.translate("MainWindow", u"20\ub144", None))
-        self.checkBox_approvalDate_25.setText(QCoreApplication.translate("MainWindow", u"25\ub144", None))
-        self.checkBox_approvalDate_30.setText(QCoreApplication.translate("MainWindow", u"30\ub144", None))
-        self.checkBox_approvalDate_max.setText(QCoreApplication.translate("MainWindow", u"30\ub144~", None))
+        # self.checkBox_approvalDate_0.setText(QCoreApplication.translate("MainWindow", u"\uc785\uc8fc\uc608\uc815", None))
+        # self.checkBox_approvalDate_2.setText(QCoreApplication.translate("MainWindow", u"2\ub144", None))
+        # self.checkBox_approvalDate_4.setText(QCoreApplication.translate("MainWindow", u"4\ub144", None))
+        # self.checkBox_approvalDate_10.setText(QCoreApplication.translate("MainWindow", u"10\ub144", None))
+        # self.checkBox_approvalDate_15.setText(QCoreApplication.translate("MainWindow", u"15\ub144", None))
+        # self.checkBox_approvalDate_20.setText(QCoreApplication.translate("MainWindow", u"20\ub144", None))
+        # self.checkBox_approvalDate_25.setText(QCoreApplication.translate("MainWindow", u"25\ub144", None))
+        # self.checkBox_approvalDate_30.setText(QCoreApplication.translate("MainWindow", u"30\ub144", None))
+        # self.checkBox_approvalDate_max.setText(QCoreApplication.translate("MainWindow", u"30\ub144~", None))
         self.label_approvalDateRange.setText(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c : ( ) ~ ( ) ", None))
         self.groupBox_8.setTitle(QCoreApplication.translate("MainWindow", u"\uc138\ub300\uc218", None))
         self.label_totalHouseholdsRange.setText(QCoreApplication.translate("MainWindow", u"\uc0ac\uc6a9\uc2b9\uc778\uc77c : ( ) ~ ( ) ", None))
-        self.checkBox_totalHouseholds_0.setText(QCoreApplication.translate("MainWindow", u"0", None))
-        self.checkBox_totalHouseholds_100.setText(QCoreApplication.translate("MainWindow", u"~100", None))
-        self.checkBox_totalHouseholds_300.setText(QCoreApplication.translate("MainWindow", u"300", None))
-        self.checkBox_totalHouseholds_500.setText(QCoreApplication.translate("MainWindow", u"500", None))
-        self.checkBox_totalHouseholds_700.setText(QCoreApplication.translate("MainWindow", u"700", None))
-        self.checkBox_totalHouseholds_1000.setText(QCoreApplication.translate("MainWindow", u"1000", None))
-        self.checkBox_totalHouseholds_1500.setText(QCoreApplication.translate("MainWindow", u"1500", None))
-        self.checkBox_totalHouseholds_2000.setText(QCoreApplication.translate("MainWindow", u"2000", None))
-        self.checkBox_totalHouseholds_max.setText(QCoreApplication.translate("MainWindow", u"2000~", None))
+        # self.checkBox_totalHouseholds_0.setText(QCoreApplication.translate("MainWindow", u"0", None))
+        # self.checkBox_totalHouseholds_100.setText(QCoreApplication.translate("MainWindow", u"~100", None))
+        # self.checkBox_totalHouseholds_300.setText(QCoreApplication.translate("MainWindow", u"300", None))
+        # self.checkBox_totalHouseholds_500.setText(QCoreApplication.translate("MainWindow", u"500", None))
+        # self.checkBox_totalHouseholds_700.setText(QCoreApplication.translate("MainWindow", u"700", None))
+        # self.checkBox_totalHouseholds_1000.setText(QCoreApplication.translate("MainWindow", u"1000", None))
+        # self.checkBox_totalHouseholds_1500.setText(QCoreApplication.translate("MainWindow", u"1500", None))
+        # self.checkBox_totalHouseholds_2000.setText(QCoreApplication.translate("MainWindow", u"2000", None))
+        # self.checkBox_totalHouseholds_max.setText(QCoreApplication.translate("MainWindow", u"2000~", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"GroupBox", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\uc9c0\uc5ed\uc120\ud0dd", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\ubb3c\uac74\uc120\ud0dd", None))
@@ -590,6 +693,7 @@ class Ui_MainWindow(object):
     def collect_realEstateType(self):
         # 체크박스 상태 정보 모으기
         checkboxes = {
+            "APT": self.checkBox_realEstateType_APT.isChecked(),
             "ABYG": self.checkBox_realEstateType_ABYG.isChecked(),
             "JGC": self.checkBox_realEstateType_JGC.isChecked(),
             "OPST": self.checkBox_realEstateType_OPST.isChecked(),
@@ -597,9 +701,10 @@ class Ui_MainWindow(object):
             "JGB": self.checkBox_realEstateType_JGB.isChecked(),
             "PRE": self.checkBox_realEstateType_PRE.isChecked()
         }
-        checked_ordered = [key for key in ["ABYG", "JGC", "OPST", "OBYG", "PRE", "JGB"] if checkboxes[key]]
+        checked_ordered = [key for key in ["APT", "ABYG", "JGC", "OPST", "OBYG", "PRE", "JGB"] if checkboxes[key]]
         real_estate_result = ":".join(checked_ordered)
-        return real_estate_result
+        print(checked_ordered)
+        return checked_ordered, real_estate_result
     
     
 
@@ -616,160 +721,291 @@ class Ui_MainWindow(object):
         return trade_type_result
 
     
-    
-    
+    def popup_dialogue(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setText("최대값은 최소값보다 높게 설정되어야 합니다.")
+        msg.setWindowTitle("경고")
+        msg.exec_()
 
     def collect_area(self):
-        # 체크박스 상태 정보 모으기
-        area_checkboxes = {
-            "10": self.checkBox_area_10,
-            "20": self.checkBox_area_20,
-            "30": self.checkBox_area_30,
-            "40": self.checkBox_area_40,
-            "50": self.checkBox_area_50,
-            "60": self.checkBox_area_60,
-            "70": self.checkBox_area_70,
-            "900000000": self.checkBox_area_max
-        }
+        go = True
+        while go:
+            # 현재 선택된 값 가져오기
+            area_min_index = self.comboBox_areaMin.currentIndex()
+            area_max_index = self.comboBox_areaMax.currentIndex()
+            
+            # 면적 값을 숫자로 변환
+            area_min = int(self.areaMinList[area_min_index].split('평')[0])
+            area_max_str = self.areaMaxList[area_max_index]
 
-        # 체크된 체크박스들을 리스트로 모으기
-        checked_areas = [int(area) for area, checkbox in area_checkboxes.items() if checkbox.isChecked()]
+            if area_max_str == "70평~":
+                area_max = 900000
+            else:
+                area_max = int(area_max_str.split('평')[0])
 
-        if not checked_areas:
-            return None, None
+            if area_min >= area_max:
+                if self.sender().objectName() == "comboBox_areaMax":
+                    self.popup_dialogue()  # 다이얼로그 팝업
+                    break
+                else:
+                    area_max_index += 1
+                    if area_max_index >= len(self.areaMaxList):  # 인덱스가 범위를 벗어나지 않도록 체크
+                        area_max_index = len(self.areaMaxList) - 1
+                        break
+                    self.comboBox_areaMax.setCurrentIndex(area_max_index)  # UI 갱신
+                    QApplication.processEvents(QEventLoop.ExcludeUserInputEvents)  # 이벤트 루프 처리
+            else:
+                go = False
 
-        areaMin = min(checked_areas)
-        areaMax = max(checked_areas)
+        return area_min, area_max
 
-        # 중간 범위 체크박스들 체크 상태로 설정
-        for area, checkbox in area_checkboxes.items():
-            if areaMin < int(area) < areaMax:
-                checkbox.setChecked(True)
 
-        return areaMin, areaMax
     
-    
-
     def collect_approval_date(self):
-        approval_date_checkboxes = {
-            "0": self.checkBox_approvalDate_0,
-            "2": self.checkBox_approvalDate_2,
-            "4": self.checkBox_approvalDate_4,
-            "10": self.checkBox_approvalDate_10,
-            "15": self.checkBox_approvalDate_15,
-            "20": self.checkBox_approvalDate_20,
-            "25": self.checkBox_approvalDate_25,
-            "30": self.checkBox_approvalDate_30,
-            "100": self.checkBox_approvalDate_max
-        }
+        # 현재 선택된 값 가져오기
+        recent_index = self.comboBox_recent.currentIndex()
+        old_index = self.comboBox_old.currentIndex()
+        recent_text = self.comboBox_recent.currentText()
+        old_text = self.comboBox_old.currentText()
 
-        checked_dates = [int(date) for date, checkbox in approval_date_checkboxes.items() if checkbox.isChecked()]
+        # 값을 숫자로 변환
+        recent_str = self.recentList[recent_index]
+        old_str = self.oldList[old_index]
 
-        if not checked_dates:
-            return None, None
+        # 값 가져오기
+        if recent_str == "입주예정":
+            recentlyBuildYears = ""
+        else:
+            recentlyBuildYears = int(recent_str.split('년')[0])
 
-        recently_build_years = min(checked_dates)
-        old_build_years = max(checked_dates)
+        if old_str == "최고" :
+            oldBuildYears = ""
+        else:
+            oldBuildYears = int(old_str.split('년')[0]  )
+            
 
-        for date, checkbox in approval_date_checkboxes.items():
-            if recently_build_years < int(date) < old_build_years:
-                checkbox.setChecked(True)
 
-        return recently_build_years, old_build_years
+        if recentlyBuildYears == "" or oldBuildYears == "":
+            return str(recentlyBuildYears), str(oldBuildYears)
+
+        if recentlyBuildYears >= oldBuildYears:
+            self.comboBox_recent.setCurrentIndex(self.comboBox_recent_current_index)
+            self.comboBox_old.setCurrentIndex(self.comboBox_old_current_index)
+            self.popup_dialogue()  # 다이얼로그 팝업
+        else :            
+            return recentlyBuildYears, oldBuildYears
+
+        
+
+
 
     def collect_total_households(self):
-        total_households_checkboxes = {
-            "0": self.checkBox_totalHouseholds_0,
-            "100": self.checkBox_totalHouseholds_100,
-            "300": self.checkBox_totalHouseholds_300,
-            "500": self.checkBox_totalHouseholds_500,
-            "700": self.checkBox_totalHouseholds_700,
-            "1000": self.checkBox_totalHouseholds_1000,
-            "1500": self.checkBox_totalHouseholds_1500,
-            "2000": self.checkBox_totalHouseholds_2000,
-            "900000": self.checkBox_totalHouseholds_max
-        }
+        # 값을 숫자로 변환
+        minHouseHoldCount = int(self.comboBox_minHouseHoldCount.currentText())
+        maxHouseHoldCount = self.comboBox_maxHouseHoldCount.currentText()
+        # 값 가져오기
+        if maxHouseHoldCount == "최대":
+            maxHouseHoldCount = ""  # "최대"를 무한대 값으로 설정
+            return str(minHouseHoldCount), str(maxHouseHoldCount)
+        else:
+            maxHouseHoldCount = int(maxHouseHoldCount)
 
-        checked_households = [int(count) for count, checkbox in total_households_checkboxes.items() if checkbox.isChecked()]
+        if minHouseHoldCount >= maxHouseHoldCount:
+            
+            # 기존 선택을 유지하도록 인덱스를 원래 상태로 되돌림
+            self.comboBox_minHouseHoldCount.setCurrentIndex(self.comboBox_minHouseHoldCount_current_index)
+            self.comboBox_maxHouseHoldCount.setCurrentIndex(self.comboBox_MaxHouseHoldCount_current_index)
+            self.popup_dialogue()  # 다이얼로그 팝업
+        else:
+            return str(minHouseHoldCount), str(maxHouseHoldCount)
 
-        if not checked_households:
-            return None, None
 
-        minHouseHoldCount = min(checked_households)
-        maxHouseHoldCount = max(checked_households)
-
-        for count, checkbox in total_households_checkboxes.items():
-            if minHouseHoldCount < int(count) < maxHouseHoldCount:
-                checkbox.setChecked(True)
-
-        return minHouseHoldCount, maxHouseHoldCount
     
     
 
     def get_infos(self) : 
         try :
             self.tradeType = self.collect_tradeType()
-            self.realEstateType = self.collect_realEstateType()
+            self.realEstateTypeOrdered, self.realEstateType = self.collect_realEstateType()
+
+            
             self.minPrice = int(self.spinBox_minPrice.value())
             self.maxPrice = int(self.spinBox_maxPrice.value())
-            self.areaMin, self.areaMax = self.collect_area()
+
+            if self.minPrice >= self.maxPrice :
+                self.spinBox_minPrice.setValue(self.spinBox_minPrice_current_value)
+                self.spinBox_maxPrice.setValue(self.spinBox_maxPrice_current_value)
+                self.popup_dialogue()
+            else :
+                self.spinBox_minPrice_current_value = self.spinBox_minPrice.value()
+                self.spinBox_maxPrice_current_value = self.spinBox_maxPrice.value()
+            
+            self.pyeongMin, self.pyeongMax = self.collect_area()
+            self.pyeongMin, self.pyeongMax = int(self.pyeongMin), int(self.pyeongMax)
+            self.areaMin, self.areaMax = int(self.pyeongMin * 3.3), int(self.pyeongMax * 3.3)
             self.recentlyBuildYears, self.oldBuildYears = self.collect_approval_date()
             self.minHouseHoldCount, self.maxHouseHoldCount = self.collect_total_households()
             self.names, self.ids = self.get_selected_items_data(self.listWidget_selected, searching_type='all')
             
+            
             self.label_dealRange.setText(f'조회가격범위 : {self.minPrice/10000} ~ {self.maxPrice/10000}(억원)')
-            self.label_areaRange.setText(f'조회평수범위 : {self.areaMin} ~ {self.areaMax}(평)')
-            self.label_approvalDateRange.setText(f'조회사용승인범위 : {self.recentlyBuildYears} ~ {self.oldBuildYears}(년 전)')
+            self.label_areaRange.setText(f'조회평수범위 : {self.areaMin} ~ {self.areaMax}(제곱미터)')
+            self.label_approvalDateRange.setText(f'조회사용승인범위 : {self.oldBuildYears}(년 전) ~ {self.recentlyBuildYears}(년 전)')
             self.label_totalHouseholdsRange.setText(f'조회세대수 : {self.minHouseHoldCount} ~ {self.maxHouseHoldCount}(세대)')
+            self.comboBox_areaMin_current_index = self.comboBox_areaMin.currentIndex()
+            self.comboBox_areaMax_current_index = self.comboBox_areaMax.currentIndex()
+            self.comboBox_old_current_index = self.comboBox_old.currentIndex()
+            self.comboBox_recent_current_index = self.comboBox_recent.currentIndex()
+            self.comboBox_minHouseHoldCount_current_index = self.comboBox_minHouseHoldCount.currentIndex()
+            self.comboBox_MaxHouseHoldCount_current_index = self.comboBox_maxHouseHoldCount.currentIndex()
+
+            self.display_complex()
         except : 
             pass
 
     def display_district(self):
         selected_items = self.listWidget_1.selectedItems()
-        district_names = []
-        province_names = []
-        for item in selected_items:
-            province_name = item.text()
-            province_names.append(province_name)
-        matching_rows = self.data[self.data['provinceName'].isin(province_names) ]
-        district_names.extend(matching_rows['districtName'].unique())
+        province_nos = [item.data(Qt.UserRole) for item in selected_items]
+        
+        # provinceNo를 기반으로 matching_rows 필터링
+        matching_rows = self.data[self.data['provinceNo'].isin(province_nos)]
+        unique_districts = matching_rows[['districtName', 'districtNo']].drop_duplicates()
+        self.listWidget_2.clearSelection()
         self.listWidget_2.clear()
-        self.listWidget_2.addItems(district_names)
-        # self.listWidget_2.selectAll()
-        # for i in range(self.listWidget_2.count()):
-        #     self.listWidget_2.item(i).setSelected(True)
+        for i in range(len(unique_districts)):
+            item = QListWidgetItem(unique_districts.iloc[i]['districtName'])
+            item.setData(Qt.UserRole, unique_districts.iloc[i]['districtNo'])
+            self.listWidget_2.addItem(item)
+
 
     def display_dong(self):
-        selected_items = self.listWidget_2.selectedItems()
-        dong_names = []
-        district_names = []        
-        for item in selected_items:
-            dong_name = item.text()
-            district_names.append(dong_name)
-        matching_rows = self.data[self.data['districtName'].isin(district_names) ]
-        dong_names.extend(matching_rows['dongName'].unique())
+        
+        self.listWidget_3.clearSelection()
         self.listWidget_3.clear()
-        self.listWidget_3.addItems(dong_names)
-        # self.listWidget_3.selectAll()
+        self.listWidget_4.clear()
+
+        
+        selected_items = self.listWidget_2.selectedItems()
+        district_nos = [item.data(Qt.UserRole) for item in selected_items]
+        print("length district_nos", len(district_nos))
+        # districtNo를 기반으로 matching_rows 필터링
+        matching_rows = self.data[self.data['districtNo'].isin(district_nos)]
+        unique_dongs = matching_rows[['dongName', 'dongNo']].drop_duplicates()
+
+        
+        for i in range(len(unique_dongs)):
+            item = QListWidgetItem(unique_dongs.iloc[i]['dongName'])
+            item.setData(Qt.UserRole, unique_dongs.iloc[i]['dongNo'])
+            self.listWidget_3.addItem(item)
+
+
+    # def display_complex(self):
+        
+    #     tik = time.time()
+    #     tok = time.time()
+    #     print(f"{tok - tik}초 ")
+    #     selected_items = self.listWidget_3.selectedItems()        
+    #     dong_nos = [item.data(Qt.UserRole) for item in selected_items]
+
+    #     print("length dong_nos", len(dong_nos))
+
+    #     # 세대수 스크리닝
+    #     min_household = int(self.minHouseHoldCount)
+    #     # print("min_household", min_household)
+    #     max_household = float('inf') if self.maxHouseHoldCount == "" else int(self.maxHouseHoldCount)
+
+    #     # 사용승인일 스크리닝
+    #     current_year = datetime.now().year
+    #     recently_build_years = float('inf') if self.recentlyBuildYears == "" else int(self.recentlyBuildYears)
+    #     old_build_years = float('inf') if self.oldBuildYears == "" else int(self.oldBuildYears)
+    #     self.data['useApproveYear'] = self.data['useApproveYmd'].astype(str).str[:4].astype(int)
+        
+    #     tok = time.time()
+    #     print(f"{tok - tik}초 ")
+    #     # 필터링
+    #     self.listWidget_4.clear()
+    #     filtered_data = self.data[
+    #         (self.data['dongNo'].isin(dong_nos)) &
+    #         (self.data['totalHouseHoldCount'] >= min_household) &
+    #         (self.data['totalHouseHoldCount'] <= max_household) &
+    #         (current_year - self.data['useApproveYear'] >= recently_build_years) &
+    #         (current_year - self.data['useApproveYear'] <= old_build_years)
+    #     ]
+
+    #     unique_complexes = filtered_data[['complexName', 'complexNo']].drop_duplicates()
+
+    #     tok = time.time()
+    #     print(f"{tok - tik}초 ")
+
+    #     for a,b in zip(unique_complexes['complexName'] , unique_complexes['complexNo']):
+    #         item = QListWidgetItem(a)
+    #         item.setData(Qt.UserRole, b)
+    #         self.listWidget_4.addItem(item)
+
+
+    #     tok = time.time()
+    #     print(f"{tok - tik}초 ")
 
     def display_complex(self):
+        tik = time.time()
+
         selected_items = self.listWidget_3.selectedItems()
-        dong_names = []
-        for item in selected_items:
-            dong_name = item.text()
-            dong_names.append(dong_name)
-        
-        matching_rows = self.data[self.data['dongName'].isin(dong_names)]
-        unique_provinces = matching_rows[['complexName', 'complexNo']].drop_duplicates()
-        
-        self.listWidget_4.clear()
-        for i in range(len(unique_provinces)):
-            item = QListWidgetItem(unique_provinces.iloc[i]['complexName'])
-            item.setData(Qt.UserRole, unique_provinces.iloc[i]['complexNo'])
-            self.listWidget_4.addItem(item)
-        
-        # self.listWidget_4.selectAll()
-        # complex_names.extend(matching_rows['complexName'].unique())
+        dong_nos = [item.data(Qt.UserRole) for item in selected_items]
+        print("length dong_nos", len(dong_nos))
+
+        # 세대수 스크리닝
+        min_household = int(self.minHouseHoldCount)
+        max_household = float('inf') if self.maxHouseHoldCount == "" else int(self.maxHouseHoldCount)
+
+        # 사용승인일 스크리닝
+        current_year = datetime.now().year
+        recently_build_years = -float('inf') if self.recentlyBuildYears == "" else int(self.recentlyBuildYears)
+        old_build_years = float('inf') if self.oldBuildYears == "" else int(self.oldBuildYears)
+        self.data['useApproveYear'] = self.data['useApproveYmd'].astype(str).str[:4].astype(int)
+
+        tok = time.time()
+        print(f"Data preparation: {tok - tik}초")
+
+        # 필터링
+        filtered_data = self.data[
+            (self.data['dongNo'].isin(dong_nos)) &
+            (self.data['realEstateType'].isin(self.realEstateTypeOrdered)) &
+            (self.data['totalHouseHoldCount'] >= min_household) &
+            (self.data['totalHouseHoldCount'] <= max_household) &
+            (current_year - self.data['useApproveYear'] >= recently_build_years) &
+            (current_year - self.data['useApproveYear'] <= old_build_years)
+        ]
+
+        unique_complexes = filtered_data[['complexName', 'complexNo']].drop_duplicates()
+
+        tok = time.time()
+        print(f"Filtering data: {tok - tik}초")
+
+        # 기존의 listWidget_4에 있는 항목들 수집
+        existing_items_data = {self.listWidget_4.item(i).data(Qt.UserRole) for i in range(self.listWidget_4.count())}
+
+        # 변경 사항만 반영하여 업데이트
+        new_items_data = set(unique_complexes['complexNo'])
+        items_to_add = new_items_data - existing_items_data
+        items_to_remove = existing_items_data - new_items_data
+
+        # 항목 제거
+        for i in range(self.listWidget_4.count()-1, -1, -1):
+            item = self.listWidget_4.item(i)
+            if item.data(Qt.UserRole) in items_to_remove:
+                self.listWidget_4.takeItem(i)
+
+        # 항목 추가
+        for a, b in zip(unique_complexes['complexName'], unique_complexes['complexNo']):
+            if b in items_to_add:
+                item = QListWidgetItem(a)
+                item.setData(Qt.UserRole, b)
+                self.listWidget_4.addItem(item)
+
+        tok = time.time()
+        print(f"UI 업데이트: {tok - tik}초")
+
     
 
     def get_selected_complex_data(self):
@@ -823,51 +1059,76 @@ class Ui_MainWindow(object):
         
     def fetching(self):
         self.get_infos()
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Popup Dialog")
 
-        # 레이아웃 생성
-        layout = QVBoxLayout(dialog)
+        if len(self.ids) < 1 :
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Popup Dialog")
+            # 레이아웃 생성
+            layout = QVBoxLayout(dialog)
+            # 라벨 생성
+            label = QLabel(f"""수집대상이 없습니다. 수집대상을 추가해주세요.""")
+            
+            # 취소 버튼 생성
+            diag_cancel_button = QPushButton("확인", dialog)
+            diag_cancel_button.clicked.connect(dialog.accept)  # QDialog의 accept 메서드를 연결
+            
+            # 레이아웃에 위젯 추가
+            layout.addWidget(label)
+            layout.addWidget(diag_cancel_button)
+            
+            # 다이얼로그 실행
+            dialog.exec()
+        else :
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Popup Dialog")
 
-        # 라벨 생성
-        label = QLabel(f"""
-    self.tradeType : {self.tradeType}
-    self.minPrice : {self.minPrice}
-    self.maxPrice : {self.maxPrice}
-    self.areaMin : {self.areaMin}
-    self.recentlyBuildYears : {self.recentlyBuildYears}
-    self.minHouseHoldCount : {self.minHouseHoldCount}
-    self.names : {self.names}
-    self.areaMax : {self.areaMax}
-    self.oldBuildYears : {self.oldBuildYears}
-    self.maxHouseHoldCount : {self.maxHouseHoldCount}
-    self.ids : {self.ids}
-    """, dialog)
+            # 레이아웃 생성
+            layout = QVBoxLayout(dialog)
 
-        # 수행 버튼 생성
-        diag_start_button = QPushButton("수집시작", dialog)
-        diag_start_button.clicked.connect(lambda: self.start_fetching(dialog))  # start_fetching 메서드를 연결
+            # 라벨 생성
+            label = QLabel(f"""
+    ✅ 조회정보
+        ▪ 조회매물수 : {len(self.names)}
+        ▪ 거래유형 : {self.tradeType.replace('A1','매매').replace('B1','전세')}
+        ▪ 가격 : {self.minPrice / 10000} ~ {self.maxPrice / 10000} (억)
+        ▪ 면적(평) : {self.pyeongMin} ~ {self.pyeongMax} (평)
+        ▪ 면적(제곱미터) : {self.areaMin} ~ {self.areaMax} (제곱미터)
+        ▪ 사용승인일 : {self.oldBuildYears} ~ {self.recentlyBuildYears} (년 전)
+        ▪ 세대 수 : {self.minHouseHoldCount} ~ {self.maxHouseHoldCount} (세대)
 
-        # 취소 버튼 생성
-        diag_cancel_button = QPushButton("취소", dialog)
-        diag_cancel_button.clicked.connect(dialog.accept)  # QDialog의 accept 메서드를 연결
+    🛑 매물 당 약 15초의 시간이 소요됩니다.
+        """, dialog)
 
-        self.res = QLabel(dialog)  # self.res를 다이얼로그에 다시 정의
+            # 수행 버튼 생성
+            diag_start_button = QPushButton("수집시작", dialog)
+            diag_start_button.clicked.connect(lambda: self.start_fetching(dialog))  # start_fetching 메서드를 연결
 
-        # 레이아웃에 위젯 추가
-        layout.addWidget(label)
-        layout.addWidget(diag_start_button)
-        layout.addWidget(diag_cancel_button)
-        layout.addWidget(self.res)  # self.res를 레이아웃에 추가
+            # 취소 버튼 생성
+            diag_cancel_button = QPushButton("취소", dialog)
+            diag_cancel_button.clicked.connect(dialog.accept)  # QDialog의 accept 메서드를 연결
 
-        # 다이얼로그 실행
-        dialog.exec()
+            self.res = QLabel(dialog)  # self.res를 다이얼로그에 다시 정의
+
+            # 레이아웃에 위젯 추가
+            layout.addWidget(label)
+            layout.addWidget(diag_start_button)
+            layout.addWidget(diag_cancel_button)
+            layout.addWidget(self.res)  # self.res를 레이아웃에 추가
+
+            # 다이얼로그 실행
+            dialog.exec()
 
     def start_fetching(self, dialog):
+
         dialog.accept()  # 다이얼로그 닫기
+        self.pushButton_stop.setVisible(True)
+        self.pushButton_start.setVisible(False)
         self.loading_label.setVisible(True)  # GIF 활성화
         self.loading_movie.start()  # GIF 재생 시작
         self.req()
+        
+        
+        
 
     def req(self):
         import requests
@@ -892,10 +1153,12 @@ class Ui_MainWindow(object):
         #         # progressChanged=self.progressChanged,
         #     )
 
-        worker = self.Worker(self)
-        worker.progressChanged.connect(self.update_progress)
-        worker.progressNameChanged.connect(self.update_progressName)
-        worker.start()
+        self.worker = self.Worker(self)
+        self.worker.progressChanged.connect(self.update_progress)
+        self.worker.progressNameChanged.connect(self.update_progressName)
+        self.worker.resultChanged.connect(self.update_result)
+        self.worker.runningChanged.connect(self.toggle_running)
+        self.worker.start()
     
     def update_progress(self, value):
         self.progressBar.setValue(value)
@@ -904,7 +1167,9 @@ class Ui_MainWindow(object):
             self.loading_movie.stop()  # GIF 재생 중지
     def update_progressName(self, value):
         self.progresslabel.setText(value)
-    
+    def update_result(self, value):
+        self.result = value
+
     def download(self, saving_format = "csv") :
         # 현재 시간을 YYYYMMDDhhmm 형식으로 추출
         current_time = datetime.now().strftime('%Y%m%d%H%M')
@@ -913,13 +1178,6 @@ class Ui_MainWindow(object):
         if format == 'excel' :
             self.result.to_excel(os.path.join(self.folder_path, f'결과_{current_time}.xlsx'), encoding='cp949', index=False)
     
-
-
-
-
-        
-        
-
     def open_folder(self):
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
@@ -929,9 +1187,14 @@ class Ui_MainWindow(object):
     class Worker(QThread) :
         progressChanged = Signal(int)
         progressNameChanged = Signal(str)
+        resultChanged = Signal(type(pd.DataFrame()))        
+        runningChanged = Signal(bool)        
+        
         def __init__(self, parent) :
             super().__init__(parent)
             self.parent = parent
+            self.running = True
+            
         
         def run(self):
             self.parent.result = self.parent.naver.fetch(
@@ -951,8 +1214,13 @@ class Ui_MainWindow(object):
                 minHouseHoldCount=self.parent.minHouseHoldCount,
                 maxHouseHoldCount=self.parent.maxHouseHoldCount,
                 progressChanged=self.progressChanged,
-                progressNameChanged=self.progressNameChanged
+                progressNameChanged=self.progressNameChanged,
+                resultChanged=self.resultChanged,
+                running=self.running
             )
+            self.parent.pushButton_stop.setVisible(False)
+            self.parent.pushButton_start.setVisible(True)
+            self.parent.naver.running = True # 혹시 바뀌었을 상황에 대비하기 위해서
 
     def show_dialog(self):
         dialog = QDialog()
@@ -960,17 +1228,29 @@ class Ui_MainWindow(object):
 
         layout = QVBoxLayout()
 
-        label = QLabel("최대지연 (초) : 2초 권장 ")
-        layout.addWidget(label)
-
+        label_delay = QLabel("최대지연 (초) : 2초 권장 ")
+        layout.addWidget(label_delay)
         double_spin_box = QDoubleSpinBox()
         double_spin_box.setRange(0.0, 100.0)
         double_spin_box.setDecimals(1)
         double_spin_box.setValue(2.0)
         double_spin_box.setSingleStep(0.1)
-
         layout.addWidget(double_spin_box)
+        
+        label_authorization = QLabel("Authorization code:")
+        self.plain_text_authorization = QPlainTextEdit()
+        self.plain_text_authorization.setPlainText(self.authorization)
+        self.plain_text_authorization.textChanged.connect(self.update_authorization)
+        layout.addWidget(label_authorization)
+        layout.addWidget(self.plain_text_authorization)
 
+        label_cookies = QLabel("Cookies:")
+        self.plain_text_cookies = QPlainTextEdit()
+        self.plain_text_cookies.setPlainText(json.dumps(self.cookies))  # dict를 문자열로 변환
+        self.plain_text_cookies.textChanged.connect(self.update_cookies)
+        layout.addWidget(label_cookies)
+        layout.addWidget(self.plain_text_cookies)
+        
         button = QPushButton("OK")
         button.clicked.connect(lambda: self.set_delay(dialog, double_spin_box.value()))
         layout.addWidget(button)
@@ -978,44 +1258,31 @@ class Ui_MainWindow(object):
         dialog.setLayout(layout)
         dialog.exec()
 
+    def update_authorization(self):
+        self.authorization = self.plain_text_authorization.toPlainText()
+    
+    def stop_fetching(self) :
+        self.worker.runningChanged.emit(False)
+    
+    def toggle_running(self) :
+        self.naver.running = False
+        
+        
+
+    def update_cookies(self):
+        try:
+            self.cookies = json.loads(self.plain_text_cookies.toPlainText())
+        except json.JSONDecodeError:
+            pass  # 유효하지 않은 JSON 형식인 경우
+
     def set_delay(self, dialog, value):
         self.delay = value
         dialog.accept()
+
     
-    def load_header_cookies(self):
-    # Chrome 옵션 설정
-        chrome_options = ChromeOptions()
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--headless")  # Headless 옵션 추가
-        chrome_options.add_argument("--disable-gpu")  # Headless 옵션에서 가속 비활성화
-
-        # Edge 옵션 설정
-        edge_options = EdgeOptions()
-        edge_options.add_argument("--no-sandbox")
-        edge_options.add_argument("--disable-dev-shm-usage")
-        edge_options.add_argument("--headless")  # Headless 옵션 추가
-        edge_options.add_argument("--disable-gpu")  # Headless 옵션에서 가속 비활성화
-
-        # 드라이버 초기화
-        try:
-            self.driver = webdriver.Chrome(service=ChromeService(), options=chrome_options)
-            print("Chrome browser initialized.")
-        except WebDriverException:
-            self.driver = webdriver.Edge(service=EdgeService(), options=edge_options)
-            print("Edge browser initialized.")
-
-        # 네이버 부동산 페이지 접속
-        self.driver.get('https://new.land.naver.com/complexes/140240?ms=35.983693,129.550805,17&a=APT:ABYG:JGC:PRE&b=A1:B1:B2&e=RETAIL&f=3000&h=231&j=2&l=700&ad=true')
-
-        # 페이지 로딩 대기 (필요에 따라 조절)
-        time.sleep(5)
-
-        # 쿠키 수집
-        self.cookies = self.driver.get_cookies()
-
-        # 셀레니움 종료
-        self.driver.quit()
+    
+    
+    
 
 
     def selectAllOrNone(self, target):
@@ -1024,7 +1291,7 @@ class Ui_MainWindow(object):
         else:
             target.clearSelection()
 
-    def measure_time(func):
+    def measure_time(self, func):
         def wrapper(*args, **kwargs):
             start_time = time.perf_counter()
             result = func(*args, **kwargs)
@@ -1034,6 +1301,9 @@ class Ui_MainWindow(object):
             return result
         return wrapper
 
+    
+    
+    
 
 
 
@@ -1041,21 +1311,22 @@ class Ui_MainWindow(object):
 
 
 
-import sys
-from PySide6.QtWidgets import QApplication, QMainWindow
-from app import Ui_MainWindow  # 변환된 UI 파일 import
 
-class MainWindow(QMainWindow, Ui_MainWindow):
-    def __init__(self):
-        super(MainWindow, self).__init__()
-        self.setupUi(self)
+# import sys
+# from PySide6.QtWidgets import QApplication, QMainWindow
+# from app import Ui_MainWindow  # 변환된 UI 파일 import
 
-def main():
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+# class MainWindow(QMainWindow, Ui_MainWindow):
+#     def __init__(self):
+#         super(MainWindow, self).__init__()
+#         self.setupUi(self)
 
-if __name__ == "__main__":
-    main()
+# def main():
+#     app = QApplication(sys.argv)
+#     window = MainWindow()
+#     window.show()
+#     sys.exit(app.exec())
+
+# if __name__ == "__main__":
+#     main()
 

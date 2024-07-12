@@ -9,42 +9,89 @@ import re
 
 from module.FileManager import FileManager
 
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import json
+import requests
+
 class Naver_seoul_land(FileManager) :
-    def __init__(self) :
+    
+
+    def __init__(self, authorization_token = None, cookies = None) :
         # 경로들 가져오기
         super().__init__()    
         self.info = pd.DataFrame()
         self.articles = pd.DataFrame()
         self.real_trades =  pd.DataFrame()
+        self.authorization = authorization_token
+        self.cookies = cookies
+        if not authorization_token or not cookies :
+            self.authorization, self.cookies = self.get_auth_n_cookie()
+            
+    
+    def get_auth_n_cookie(headless = True) :
+        # Enable browser logging
+        chrome_options = Options()
+        if headless : chrome_options.add_argument("--headless")  # Headless 옵션 추가
+        chrome_options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
+        # Setup the webdriver
+        driver = webdriver.Chrome(options=chrome_options)
+        # Open the URL
+        url = "https://new.land.naver.com/complexes/3039"
+        try :
+            driver.get(url)
+            # Optional: Add some wait time to ensure the page loads completely
+            driver.implicitly_wait(10)
+            # Extract network logs and find the request with 'land.naver.com/api/articles' in the URL
+            logs = driver.get_log('performance')
+            authorization_token = None
+            for log in logs:
+                log_json = json.loads(log['message'])
+                message = log_json['message']
+                if 'Network.requestWillBeSent' in message['method']:
+                    request = message.get('params', {'request': {}}).get('request', {'url': ''})
+                    if 'land.naver.com/api/articles' in request['url']:
+                        headers = request['headers']
+                        if 'authorization' in headers:
+                            authorization_token = headers['authorization']
+                            break
+            # Extract cookies
+            cookies_list = driver.get_cookies()
+            cookies = {cookie['name']: cookie['value'] for cookie in cookies_list}
+        finally :
+        # Close the driver (optional, when done)
+            driver.quit()
+        return authorization_token ,cookies
+        
 
-    def get_provinces(cortarNo = "0000000000") :
+    def get_provinces(self, cortarNo = "0000000000") :
         import requests
-
-        cookies = {
-            'NNB': 'X4AQ72WKVDWWK',
-            '_ga_EFBDNNF91G': 'GS1.1.1710342642.1.0.1710342642.0.0.0',
-            '_ga': 'GA1.2.1432322870.1710342643',
-            'ASID': 'de6c8eec0000018e4a6f6df000000057',
-            'ba.uuid': '5bc9ada0-1bf0-4056-990b-4664443def51',
-            '_ga_6Z6DP60WFK': 'GS1.2.1715222690.1.1.1715222788.22.0.0',
-            '_fwb': '466u0Eh7yaUAZ21KUVztYh.1715756440721',
-            '_fwb': '177FzAmJvq2ZIC2aaw2bGEA.1716702331931',
-            'landHomeFlashUseYn': 'Y',
-            'NAC': 'eWSqDYgPae4PA',
-            'nhn.realestate.article.rlet_type_cd': 'A01',
-            'nhn.realestate.article.trade_type_cd': '""',
-            'NACT': '1',
-            'page_uid': 'ioW/RdqVOsCssAdy5MKssssssko-448268',
-            '_naver_usersession_': 'Mm0sn45xW/KWUfblGsoyNQ==',
-            'REALESTATE': 'Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST)',
-            'wcs_bt': '4f99b5681ce60:1720418179',
-            'BUC': 'ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
-        }
+        
+        # cookies =  {
+        #     'NNB': 'X4AQ72WKVDWWK',
+        #     '_ga_EFBDNNF91G': 'GS1.1.1710342642.1.0.1710342642.0.0.0',
+        #     '_ga': 'GA1.2.1432322870.1710342643',
+        #     'ASID': 'de6c8eec0000018e4a6f6df000000057',
+        #     'ba.uuid': '5bc9ada0-1bf0-4056-990b-4664443def51',
+        #     '_ga_6Z6DP60WFK': 'GS1.2.1715222690.1.1.1715222788.22.0.0',
+        #     '_fwb': '466u0Eh7yaUAZ21KUVztYh.1715756440721',
+        #     '_fwb': '177FzAmJvq2ZIC2aaw2bGEA.1716702331931',
+        #     'landHomeFlashUseYn': 'Y',
+        #     'NAC': 'eWSqDYgPae4PA',
+        #     'nhn.realestate.article.rlet_type_cd': 'A01',
+        #     'nhn.realestate.article.trade_type_cd': '""',
+        #     'NACT': '1',
+        #     'page_uid': 'ioW/RdqVOsCssAdy5MKssssssko-448268',
+        #     '_naver_usersession_': 'Mm0sn45xW/KWUfblGsoyNQ==',
+        #     'REALESTATE': 'Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST)',
+        #     'wcs_bt': '4f99b5681ce60:1720418179',
+        #     'BUC': 'ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
+        # }
 
         headers = {
             'accept': '*/*',
             'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3MjA0MTgxNzksImV4cCI6MTcyMDQyODk3OX0.8tTZNWoblgDsDC_4rL8VCwmQOKqF7LBUr1gKDFp7tPo',
+            'authorization': self.authorization,
             # 'cookie': 'NNB=X4AQ72WKVDWWK; _ga_EFBDNNF91G=GS1.1.1710342642.1.0.1710342642.0.0.0; _ga=GA1.2.1432322870.1710342643; ASID=de6c8eec0000018e4a6f6df000000057; ba.uuid=5bc9ada0-1bf0-4056-990b-4664443def51; _ga_6Z6DP60WFK=GS1.2.1715222690.1.1.1715222788.22.0.0; _fwb=466u0Eh7yaUAZ21KUVztYh.1715756440721; _fwb=177FzAmJvq2ZIC2aaw2bGEA.1716702331931; landHomeFlashUseYn=Y; NAC=eWSqDYgPae4PA; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=""; NACT=1; page_uid=ioW/RdqVOsCssAdy5MKssssssko-448268; _naver_usersession_=Mm0sn45xW/KWUfblGsoyNQ==; REALESTATE=Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1720418179; BUC=ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
             'priority': 'u=1, i',
             'referer': 'https://new.land.naver.com/search?ms=37.5444094,127.0092879,16&a=APT:ABYG:JGC:OPST:OBYG:PRE:JGB&b=A1:B1:B2&e=RETAIL&f=3000&h=165&i=231&j=30&l=700&ad=true',
@@ -61,37 +108,37 @@ class Naver_seoul_land(FileManager) :
             'cortarNo': cortarNo,
         }
 
-        response = requests.get('https://new.land.naver.com/api/regions/list', params=params, cookies=cookies, headers=headers)
+        response = requests.get('https://new.land.naver.com/api/regions/list', params=params, cookies=self.cookies, headers=headers)
         return response.json()
 
-    def get_districts(cortarNo = "1100000000") :
+    def get_districts(self, cortarNo = "1100000000") :
         import requests
 
-        cookies = {
-            'NNB': 'X4AQ72WKVDWWK',
-            '_ga_EFBDNNF91G': 'GS1.1.1710342642.1.0.1710342642.0.0.0',
-            '_ga': 'GA1.2.1432322870.1710342643',
-            'ASID': 'de6c8eec0000018e4a6f6df000000057',
-            'ba.uuid': '5bc9ada0-1bf0-4056-990b-4664443def51',
-            '_ga_6Z6DP60WFK': 'GS1.2.1715222690.1.1.1715222788.22.0.0',
-            '_fwb': '466u0Eh7yaUAZ21KUVztYh.1715756440721',
-            '_fwb': '177FzAmJvq2ZIC2aaw2bGEA.1716702331931',
-            'landHomeFlashUseYn': 'Y',
-            'NAC': 'eWSqDYgPae4PA',
-            'nhn.realestate.article.rlet_type_cd': 'A01',
-            'nhn.realestate.article.trade_type_cd': '""',
-            'NACT': '1',
-            'page_uid': 'ioW/RdqVOsCssAdy5MKssssssko-448268',
-            '_naver_usersession_': 'Mm0sn45xW/KWUfblGsoyNQ==',
-            'REALESTATE': 'Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST)',
-            'wcs_bt': '4f99b5681ce60:1720418179',
-            'BUC': 'ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
-        }
+        # cookies = {
+        #     'NNB': 'X4AQ72WKVDWWK',
+        #     '_ga_EFBDNNF91G': 'GS1.1.1710342642.1.0.1710342642.0.0.0',
+        #     '_ga': 'GA1.2.1432322870.1710342643',
+        #     'ASID': 'de6c8eec0000018e4a6f6df000000057',
+        #     'ba.uuid': '5bc9ada0-1bf0-4056-990b-4664443def51',
+        #     '_ga_6Z6DP60WFK': 'GS1.2.1715222690.1.1.1715222788.22.0.0',
+        #     '_fwb': '466u0Eh7yaUAZ21KUVztYh.1715756440721',
+        #     '_fwb': '177FzAmJvq2ZIC2aaw2bGEA.1716702331931',
+        #     'landHomeFlashUseYn': 'Y',
+        #     'NAC': 'eWSqDYgPae4PA',
+        #     'nhn.realestate.article.rlet_type_cd': 'A01',
+        #     'nhn.realestate.article.trade_type_cd': '""',
+        #     'NACT': '1',
+        #     'page_uid': 'ioW/RdqVOsCssAdy5MKssssssko-448268',
+        #     '_naver_usersession_': 'Mm0sn45xW/KWUfblGsoyNQ==',
+        #     'REALESTATE': 'Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST)',
+        #     'wcs_bt': '4f99b5681ce60:1720418179',
+        #     'BUC': 'ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
+        # }
 
         headers = {
             'accept': '*/*',
             'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-            'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3MjA0MTgxNzksImV4cCI6MTcyMDQyODk3OX0.8tTZNWoblgDsDC_4rL8VCwmQOKqF7LBUr1gKDFp7tPo',
+            'authorization': self.authorization,
             # 'cookie': 'NNB=X4AQ72WKVDWWK; _ga_EFBDNNF91G=GS1.1.1710342642.1.0.1710342642.0.0.0; _ga=GA1.2.1432322870.1710342643; ASID=de6c8eec0000018e4a6f6df000000057; ba.uuid=5bc9ada0-1bf0-4056-990b-4664443def51; _ga_6Z6DP60WFK=GS1.2.1715222690.1.1.1715222788.22.0.0; _fwb=466u0Eh7yaUAZ21KUVztYh.1715756440721; _fwb=177FzAmJvq2ZIC2aaw2bGEA.1716702331931; landHomeFlashUseYn=Y; NAC=eWSqDYgPae4PA; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=""; NACT=1; page_uid=ioW/RdqVOsCssAdy5MKssssssko-448268; _naver_usersession_=Mm0sn45xW/KWUfblGsoyNQ==; REALESTATE=Mon%20Jul%2008%202024%2014%3A56%3A19%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1720418179; BUC=ALuosgpXpFwx53eyy1kI1_LZEbyQrVqjHcIRoktl0zI=',
             'priority': 'u=1, i',
             'referer': 'https://new.land.naver.com/search?ms=37.5444094,127.0092879,16&a=APT:ABYG:JGC:OPST:OBYG:PRE:JGB&b=A1:B1:B2&e=RETAIL&f=3000&h=165&i=231&j=30&l=700&ad=true',
@@ -108,14 +155,15 @@ class Naver_seoul_land(FileManager) :
             'cortarNo': cortarNo,
         }
 
-        response = requests.get('https://new.land.naver.com/api/regions/list', params=params, cookies=cookies, headers=headers)
+        response = requests.get('https://new.land.naver.com/api/regions/list', params=params, cookies=self.cookies, headers=headers)
         return response.json()
     
     def get_dong(self, cortarNo ="1120000000") :
         """구 이하 동이름 가져오기"""
         url = "https://new.land.naver.com/api/regions/list"
         headers = {
-            "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2011%3A04%3A44%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1719021885; BUC=fZZA8_pWVcDwPBsokKy-ABqKINLnOafN4vdJCZoIdxs=",
+            # "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2011%3A04%3A44%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1719021885; BUC=fZZA8_pWVcDwPBsokKy-ABqKINLnOafN4vdJCZoIdxs=",
+            "authorization" : self.authorization,
             "Referer": "https://new.land.naver.com/complexes?ms=37.554416,127.0195285,17&a=APT:ABYG:JGC:PRE&e=RETAIL",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
         }
@@ -124,30 +172,31 @@ class Naver_seoul_land(FileManager) :
             "cortarNo": cortarNo
         }
 
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, cookies=self.cookies)
         data = response.json()
         return data
 
-    def get_apts(self, cortarNo = "1120011000") :
+    def get_apts(self, cortarNo = "1120011000", realEstateType = "APT:ABYG:JGC:PRE:OPST:OBYG:JGB",) :
         """동 이하 아파트 이름 가져오기"""
 
         url = "https://new.land.naver.com/api/regions/complexes"
         headers = {
-            "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2011%3A04%3A44%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1719021885; BUC=fZZA8_pWVcDwPBsokKy-ABqKINLnOafN4vdJCZoIdxs=",
+            # "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2011%3A04%3A44%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1719021885; BUC=fZZA8_pWVcDwPBsokKy-ABqKINLnOafN4vdJCZoIdxs=",
+            "authorization" : self.authorization,
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
         }
 
         params = {
             "cortarNo": cortarNo,
-            "realEstateType": "APT:PRE",
+            "realEstateType": realEstateType,
             "order": ""
         }
 
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, cookies=self.cookies)
         data = response.json()
         return data
     
-    def fetch_total_complex_naver_got(self) :
+    def fetch_total_complex_naver_got(self, realEstateType=None) :
         import time
         import random
         시도단위들 = self.get_provinces()['regionList']
@@ -175,9 +224,13 @@ class Naver_seoul_land(FileManager) :
                         건물타입 = 건물['realEstateTypeCode']
                         위도 = 건물['latitude']
                         경도 = 건물['longitude']
-                        result = (시도단위id, 시도단위이름, 자치구id, 자치구이름, 동읍면id, 동읍면이름, 건물id, 건물타입, 건물이름, 위도, 경도)
+                        세대수 = 건물.get('totalHouseholdCount', '정보없음')
+                        승인연도 = 건물.get('useApproveYmd', '정보없음')   
+
+                        result = (시도단위id, 시도단위이름, 자치구id, 자치구이름, 동읍면id, 동읍면이름, 건물id, 건물타입, 건물이름, 위도, 경도, 세대수, 승인연도)
                         results.append(result)
                         print(result)
+        return pd.DataFrame(results, columns=['시도단위id', '시도단위이름', '자치구id', '자치구이름', '동읍면id', '동읍면이름', '건물id', '건물타입', '건물이름', '위도', '경도', '세대수', '승인연도'])
 
     # 매물조회
     def fetch_apt_items(self, 
@@ -205,12 +258,11 @@ class Naver_seoul_land(FileManager) :
 
         url = f"https://new.land.naver.com/api/articles/complex/{complexNo}"
         headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3MTkwMjQ2MTEsImV4cCI6MTcxOTAzNTQxMX0.x3jYojHGWB6R2BHcODH8LI4CaxaxyHdcHFucBFCIS0Y",
-            "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2011%3A50%3A11%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1719024611; BUC=Dwr5Ph9_Z0h12xcrVOHR5Bz1D2_7_i3ypl51m0vlbfk=",
+            "Authorization": self.authorization,
+            # "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2011%3A50%3A11%20GMT%2B0900%20(KST); wcs_bt=4f99b5681ce60:1719024611; BUC=Dwr5Ph9_Z0h12xcrVOHR5Bz1D2_7_i3ypl51m0vlbfk=",
             "Referer": "https://new.land.naver.com/complexes/1147?ms=37.544731,126.9391515,17&a=APT:PRE&b=A1&e=RETAIL",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
         }
-
         params = {
             "realEstateType": realEstateType,
             "tradeType": tradeType,
@@ -239,7 +291,7 @@ class Naver_seoul_land(FileManager) :
             "order": "rank"
         }
 
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, cookies=self.cookies,params=params)
         result = response.json()
         
 
@@ -305,7 +357,9 @@ class Naver_seoul_land(FileManager) :
 
             df = pd.DataFrame(results) # 판다스 데이터프레임
             if len(df) == 0 :
-                df = pd.DataFrame(columns=self.cols_article)                
+                df = pd.DataFrame({col: '매물없음' for col in self.cols_article}, index=['0'])
+                # df = pd.DataFrame(columns=self.cols_article)                
+
             
             if 'floorInfo' in df.columns :
                 df['floorInfo'] = df['floorInfo'].apply(lambda x : f"{x}층")
@@ -319,18 +373,18 @@ class Naver_seoul_land(FileManager) :
 
 
     # 단지정보
-    def fetch_apt_info(self, complexNo=1147):
+    def fetch_apt_info(self,  complexNo=1147):
         """단지정보 조회"""
         url = f"https://new.land.naver.com/api/complexes/overview/{complexNo}"
         headers = {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IlJFQUxFU1RBVEUiLCJpYXQiOjE3MTkwMjUyNDAsImV4cCI6MTcxOTAzNjA0MH0.ld0GtF1d0IZK-kDSqcmFarUz00qPN7g-7i_J5RpgTDY",
-            "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2012%3A00%3A40%20GMT%2B0900%20(KST); BUC=RCphcWIuUeinf-MgG0Dke4l0F8fEAWdtIj-xN1lIlTE=; wcs_bt=4f99b5681ce60:1719025241",
-            "Priority": "u=1, i",
-            "Referer": "https://new.land.naver.com/complexes?ms=37.544731,126.942547,17&a=APT:ABYG:JGC:PRE&b=A1&e=RETAIL",
+            "Authorization": self.authorization,
+            # "Cookie": "NNB=FCKCGABYXJBGM; ASID=de6c8eec0000018fe0e3f4d60000005d; NAC=r45BBMwegqUeB; NACT=1; nhn.realestate.article.rlet_type_cd=A01; nhn.realestate.article.trade_type_cd=; nhn.realestate.article.ipaddress_city=1100000000; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; landHomeFlashUseYn=Y; page_uid=iFhWwdqVOsCssiyk1dGsssssskR-268088; _fwb=61LHhDmgSVSDTIn6beSYcT.1719020991264; REALESTATE=Sat%20Jun%2022%202024%2012%3A00%3A40%20GMT%2B0900%20(KST); BUC=RCphcWIuUeinf-MgG0Dke4l0F8fEAWdtIj-xN1lIlTE=; wcs_bt=4f99b5681ce60:1719025241",
+            # "Priority": "u=1, i",
+            # "Referer": "https://new.land.naver.com/complexes?ms=37.544731,126.942547,17&a=APT:ABYG:JGC:PRE&b=A1&e=RETAIL",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
         }
 
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, cookies=self.cookies)
         raw_data = response.json()
         result = self.total_apts_naver_got[self.total_apts_naver_got['complexNo'] == complexNo].copy()
 
@@ -367,6 +421,38 @@ class Naver_seoul_land(FileManager) :
         
 
     # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+    # todo : 이 이하는 아직 정리하지 못했다.
+
 
 
     # 실거래가
